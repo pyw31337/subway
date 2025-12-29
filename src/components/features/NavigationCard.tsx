@@ -220,9 +220,17 @@ export default function NavigationCard({ currentStation }: NavigationCardProps) 
                                 {/* Transfer Badge */}
                                 {idx > 0 && idx < stationIds.length - 1 &&
                                     stationIds[idx].substring(0, 4) !== stationIds[idx + 1].substring(0, 4) && (
-                                        <span className="px-2 py-1 rounded bg-[#EF7C1C]/20 border border-[#EF7C1C]/50 text-[#EF7C1C] text-xs font-bold">
-                                            환승
-                                        </span>
+                                        <div className="flex flex-col items-end mt-1">
+                                            <span className="px-2 py-1 rounded bg-[#EF7C1C]/20 border border-[#EF7C1C]/50 text-[#EF7C1C] text-xs font-bold">
+                                                환승
+                                            </span>
+                                            {routeData.shtTransferMsg && (
+                                                <div className="mt-1 flex flex-col items-end">
+                                                    <span className="text-[10px] text-gray-400">빠른환승</span>
+                                                    <span className="text-xs text-yellow-400 font-bold">{routeData.shtTransferMsg}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                             </motion.div>
                         );

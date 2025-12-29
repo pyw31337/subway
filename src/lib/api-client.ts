@@ -24,9 +24,6 @@ export async function fetchArrivals(station: string): Promise<RealtimeArrival[]>
         await new Promise(r => setTimeout(r, MOCK_DELAY));
 
         // Return Mock Data based on station name if possible, or generic
-        // We already have generator in mock-data.ts? 
-        // Let's rely on the mock-data.ts logic if refined, or just return basic mocks.
-        // For now, let's use the MOCK_ARRIVALS from mock-data.ts
         return MOCK_ARRIVALS;
     }
 
@@ -39,7 +36,29 @@ export async function fetchArrivals(station: string): Promise<RealtimeArrival[]>
 
 export async function fetchNavigation(start: string, end: string): Promise<any> {
     if (IS_PRODUCTION) {
-        console.warn("⚠️ Production Mode: Using Mock Navigation Data");
+        // Option A: Try Real API via CORS Proxy
+        const SEOUL_KEY = process.env.NEXT_PUBLIC_SEOUL_API_KEY;
+        if (SEOUL_KEY) {
+            try {
+                // Use allorigins.win as a CORS proxy
+                // Target: http://swopenapi.seoul.go.kr/api/subway/(KEY)/json/shortestRoute/0/5/(Start)/(End)
+                const targetUrl = `http://swopenapi.seoul.go.kr/api/subway/${SEOUL_KEY}/json/shortestRoute/0/5/${encodeURIComponent(start)}/${encodeURIComponent(end)}`;
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+
+                const res = await fetch(proxyUrl);
+                if (res.ok) {
+                    const data = await res.json();
+                    // Basic validation
+                    if (data.shortestRouteList && data.shortestRouteList.length > 0) {
+                        return data;
+                    }
+                }
+            } catch (e) {
+                console.error("Proxy fetch failed, falling back to mock", e);
+            }
+        }
+
+        console.warn("⚠️ Production Mode: Fallback to Mock (Key missing or Proxy failed)");
         await new Promise(r => setTimeout(r, MOCK_DELAY));
 
         // Return a mock route
