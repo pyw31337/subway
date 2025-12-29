@@ -24,7 +24,7 @@ export default function BottomSearch({ startStation, onStartChange, onSearch, lo
         <motion.div
             initial={{ y: 50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            className="w-full max-w-4xl mx-auto"
+            className="w-full max-w-6xl mx-auto"
         >
             <form
                 onSubmit={handleSubmit}

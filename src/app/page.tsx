@@ -43,7 +43,7 @@ export default function Home() {
 
         {/* Arrival Board (Floating Top Right) */}
         {/* Show only if no active navigation? Or always? */}
-        <div className="pointer-events-auto w-80 hidden sm:block">
+        <div className="pointer-events-auto w-96 hidden sm:block">
           <ArrivalBoard station={currentStation} />
         </div>
       </div>
@@ -52,7 +52,7 @@ export default function Home() {
       {/* If Navigation Active, show Card */}
       {navRoute && (
         <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center bg-white/10 backdrop-blur-[2px]">
-          <div className="w-full max-w-lg px-4 pointer-events-auto">
+          <div className="w-full max-w-2xl px-4 pointer-events-auto">
             {/* We pass props to NavCard to Force Guide Mode */}
             {/* We need to modify NavCard to accept props first, for now let's mount it and hope. 
                        Actually, NavCard requires refactoring to accept 'start'/'end' via props.
