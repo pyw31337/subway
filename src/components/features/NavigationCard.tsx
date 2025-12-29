@@ -6,25 +6,32 @@ import { fetchNavigation } from "@/lib/api-client";
 
 interface NavigationCardProps {
     currentStation: string;
+    initialDestination?: string;
+    onClose?: () => void;
 }
 
-export default function NavigationCard({ currentStation }: NavigationCardProps) {
-    const [destination, setDestination] = useState("");
-    const [mode, setMode] = useState<"INPUT" | "GUIDE">("INPUT");
+export default function NavigationCard({ currentStation, initialDestination, onClose }: NavigationCardProps) {
+    const [destination, setDestination] = useState(initialDestination || "");
+    const [mode, setMode] = useState<"INPUT" | "GUIDE">(initialDestination ? "GUIDE" : "INPUT");
     const [loading, setLoading] = useState(false);
     const [routeData, setRouteData] = useState<any>(null);
 
+    // Auto-search if initialDestination is provided
+    useEffect(() => {
+        if (initialDestination) {
+            setDestination(initialDestination);
+            startNavigation(initialDestination);
+        }
+    }, [initialDestination]);
 
-
-    // ... inside NavigationCard ...
-
-    const startNavigation = async () => {
-        if (!destination) return;
+    const startNavigation = async (destOverride?: string) => {
+        const target = destOverride || destination;
+        if (!target) return;
         setLoading(true);
 
         try {
             // Use Helper (Supports Static Export with Mock)
-            const data = await fetchNavigation(currentStation, destination);
+            const data = await fetchNavigation(currentStation, target);
 
             // API returns 'shortestRouteList'
             const list = data.shortestRouteList || data.realtimeArrivalList;
@@ -35,10 +42,12 @@ export default function NavigationCard({ currentStation }: NavigationCardProps) 
             } else {
                 console.warn("API Data:", data);
                 alert("경로를 찾을 수 없습니다. 역 이름을 확인해주세요.");
+                onClose?.();
             }
         } catch (e) {
             console.error(e);
             alert("경로 검색 중 오류가 발생했습니다.");
+            onClose?.();
         } finally {
             setLoading(false);
         }
@@ -78,7 +87,7 @@ export default function NavigationCard({ currentStation }: NavigationCardProps) 
                 </div>
 
                 <button
-                    onClick={startNavigation}
+                    onClick={() => startNavigation()}
                     disabled={loading}
                     className="w-full py-3 bg-[#00B050] hover:bg-[#009b45] disabled:bg-gray-700 text-white font-bold rounded-xl transition-colors flex justify-center items-center gap-2"
                 >
@@ -107,7 +116,7 @@ export default function NavigationCard({ currentStation }: NavigationCardProps) 
     };
 
     return (
-        <div className="bg-[#1C1C1E] border border-gray-700 rounded-3xl p-6 mb-6 relative overflow-hidden">
+        <div className="bg-[#1C1C1E] border border-gray-700 rounded-3xl p-6 mb-6 relative overflow-hidden shadow-2xl">
             {/* Header Info */}
             <div className="flex justify-between items-start mb-6">
                 <div>
@@ -134,7 +143,10 @@ export default function NavigationCard({ currentStation }: NavigationCardProps) 
                     </div>
                 </div>
                 <button
-                    onClick={() => setMode("INPUT")}
+                    onClick={() => {
+                        if (onClose) onClose();
+                        else setMode("INPUT");
+                    }}
                     className="bg-gray-800 p-2 rounded-full hover:bg-gray-700 transition-colors"
                 >
                     <span className="text-xs text-gray-400">닫기</span>
