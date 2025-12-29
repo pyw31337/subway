@@ -1,17 +1,42 @@
+import { useState, useEffect } from "react";
 import { RealtimeArrival } from "@/types";
 import { LINE_COLORS, SUBWAY_ID_MAP } from "@/lib/subway-data";
 import { Clock, TrainFront, ChevronRight, MapPin } from "lucide-react";
+import { fetchArrivals } from "@/lib/api-client";
 
 interface ArrivalBoardProps {
-    arrivals: RealtimeArrival[];
-    loading: boolean;
+    station: string;
 }
 
-export default function ArrivalBoard({ arrivals, loading }: ArrivalBoardProps) {
-    if (loading) {
+export default function ArrivalBoard({ station }: ArrivalBoardProps) {
+    const [arrivals, setArrivals] = useState<RealtimeArrival[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!station) return;
+
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const data = await fetchArrivals(station);
+                setArrivals(data);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+        // Optional: Auto-refresh every 30s?
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
+    }, [station]);
+
+    if (loading && arrivals.length === 0) {
         return (
-            <div className="space-y-4 animate-pulse px-2">
-                {[1, 2, 3].map((i) => (
+            <div className="space-y-4 animate-pulse px-2 mb-6">
+                {[1, 2].map((i) => (
                     <div key={i} className="h-24 bg-gray-800/50 rounded-3xl" />
                 ))}
             </div>
@@ -20,9 +45,9 @@ export default function ArrivalBoard({ arrivals, loading }: ArrivalBoardProps) {
 
     if (arrivals.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-500 gap-4">
-                <TrainFront className="w-12 h-12 opacity-20" />
-                <p>도착 정보가 없습니다.</p>
+            <div className="flex flex-col items-center justify-center py-10 text-gray-500 gap-4 mb-6">
+                <TrainFront className="w-10 h-10 opacity-20" />
+                <p className="text-sm">도착 정보가 없습니다.</p>
             </div>
         );
     }
