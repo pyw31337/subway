@@ -63,3 +63,5 @@ export function generateMockData(stationName: string): RealtimeArrival[] {
         createTrain("1005", "하행", "마천행", "곧 도착", 30, "다음역"),
     ];
 }
+
+export const MOCK_ARRIVALS: RealtimeArrival[] = generateMockData("강남");

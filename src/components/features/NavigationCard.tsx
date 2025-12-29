@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { ArrowRight, Map, Navigation as NavIcon, Clock, Shuffle } from "lucide-react";
 import { motion } from "framer-motion";
 import { LINE_COLORS, SUBWAY_ID_MAP } from "@/lib/subway-data";
+import { fetchNavigation } from "@/lib/api-client";
 
 interface NavigationCardProps {
     currentStation: string;
@@ -13,13 +14,17 @@ export default function NavigationCard({ currentStation }: NavigationCardProps) 
     const [loading, setLoading] = useState(false);
     const [routeData, setRouteData] = useState<any>(null);
 
+
+
+    // ... inside NavigationCard ...
+
     const startNavigation = async () => {
         if (!destination) return;
         setLoading(true);
 
         try {
-            const res = await fetch(`/api/nav?start=${encodeURIComponent(currentStation)}&end=${encodeURIComponent(destination)}`);
-            const data = await res.json();
+            // Use Helper (Supports Static Export with Mock)
+            const data = await fetchNavigation(currentStation, destination);
 
             // API returns 'shortestRouteList'
             const list = data.shortestRouteList || data.realtimeArrivalList;

@@ -10,12 +10,14 @@ import { RealtimeArrival } from "@/types";
 
 import Background from "@/components/ui/Background";
 
+import { fetchArrivals } from "@/lib/api-client";
+
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [arrivals, setArrivals] = useState<RealtimeArrival[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [currentStation, setCurrentStation] = useState<string>(""); // Default empty, wait for GPS or Manual
+  const [currentStation, setCurrentStation] = useState<string>("");
 
   // Search Handler
   const handleSearch = async (query: string) => {
@@ -26,14 +28,9 @@ export default function Home() {
     setArrivals([]);
 
     try {
-      const res = await fetch(`/api/arrival?station=${encodeURIComponent(query)}`);
-      const data = await res.json();
-
-      if (data.realtimeArrivalList) {
-        setArrivals(data.realtimeArrivalList);
-      } else {
-        setArrivals([]);
-      }
+      // Use Helper (Supports Static Export with Mock)
+      const data = await fetchArrivals(query);
+      setArrivals(data);
     } catch (err) {
       console.error("Search failed:", err);
     } finally {
