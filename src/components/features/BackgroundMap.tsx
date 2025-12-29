@@ -12,6 +12,11 @@ declare global {
 export default function BackgroundMap() {
     const { coordinates, error } = useGeolocation();
     const [center, setCenter] = useState({ lat: 37.5665, lng: 126.9780 }); // Default: City Hall
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     // Sync center to user location initially or when updated?
     // Uber-style: Follow user, but allow panning.
@@ -32,6 +37,8 @@ export default function BackgroundMap() {
         filter: "grayscale(80%) invert(90%) hue-rotate(180deg) contrast(1.2) brightness(0.8)"
     };
 
+    if (!isMounted) return <div className="fixed inset-0 bg-black z-0" />;
+
     return (
         <div className="fixed inset-0 z-0 bg-black">
             <Map
@@ -40,7 +47,10 @@ export default function BackgroundMap() {
                 level={5} // Zoom Level (Subway lines visible?)
             >
                 {/* 1. Subway Overlay (Built-in) */}
-                <MapTypeId type={window.kakao?.maps?.MapTypeId?.SUBWAY} />
+                {/* Check if window.kakao exists just in case, though isMounted helps */}
+                {window.kakao && window.kakao.maps && window.kakao.maps.MapTypeId && (
+                    <MapTypeId type={window.kakao.maps.MapTypeId.SUBWAY} />
+                )}
 
                 {/* 2. User Location Marker (Pulse) */}
                 {coordinates && (
