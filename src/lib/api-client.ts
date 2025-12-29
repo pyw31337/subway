@@ -61,3 +61,42 @@ export async function fetchNavigation(start: string, end: string): Promise<any> 
     if (!res.ok) throw new Error("Failed to fetch nav");
     return await res.json();
 }
+
+/**
+ * Kakao Local API: Search Category (SW8 = Subway)
+ * Docs: https://developers.kakao.com/docs/latest/ko/local/dev-guide#search-category
+ */
+export async function fetchNearbyStationsKakao(lat: number, lng: number): Promise<string | null> {
+    const KAKAO_KEY = process.env.NEXT_PUBLIC_KAKAO_API_KEY;
+
+    // If no key, fallback to null (caller handles fallback)
+    if (!KAKAO_KEY) {
+        console.warn("Kakao API Key missing. Skipping external API call.");
+        return null;
+    }
+
+    try {
+        const res = await fetch(
+            `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=SW8&x=${lng}&y=${lat}&radius=2000&sort=distance`,
+            {
+                headers: {
+                    Authorization: `KakaoAK ${KAKAO_KEY}`
+                }
+            }
+        );
+
+        if (!res.ok) {
+            throw new Error(`Kakao API Error: ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (data.documents && data.documents.length > 0) {
+            // Return the closest station name (e.g. "양평역 5호선" -> "양평")
+            const placeName = data.documents[0].place_name;
+            return placeName.split(" ")[0].replace("역", "");
+        }
+    } catch (err) {
+        console.error("Failed to fetch from Kakao:", err);
+    }
+    return null;
+}

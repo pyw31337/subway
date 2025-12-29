@@ -4,6 +4,7 @@ import { STATIONS } from "@/lib/subway-data";
 import { MapPin, Navigation, Edit2, Check, X } from "lucide-react"; // Import Icons
 import { useEffect, useState } from "react";
 import { Station } from "@/lib/subway-data";
+import { fetchNearbyStationsKakao } from "@/lib/api-client";
 
 interface LocationCardProps {
     onSelectStation: (name: string) => void;
@@ -19,27 +20,54 @@ export default function LocationCard({ onSelectStation, onLocationUpdate }: Loca
     const [manualLocation, setManualLocation] = useState("");
     const [currentDisplay, setCurrentDisplay] = useState("위치 정보 없음");
 
+
+
+    // ... previous code ...
+
     // GPS Sync Logic
     useEffect(() => {
-        if (coordinates && !manualLocation) {
-            const found = findNearestStation(coordinates.lat, coordinates.lng, STATIONS);
-            if (found) {
-                const dist = getDistanceFromLatLonInKm(
-                    coordinates.lat,
-                    coordinates.lng,
-                    found.lat,
-                    found.lng
-                );
-                // Auto-set if close enough (Increased to 20km for easier testing)
-                if (dist <= 20.0) {
-                    setNearest({ station: found, dist });
-                    onLocationUpdate(found.name);
-                    setCurrentDisplay(found.name);
+        const syncLocation = async () => {
+            if (coordinates && !manualLocation) {
+                // 1. Try Kakao API first
+                const kakaoStation = await fetchNearbyStationsKakao(coordinates.lat, coordinates.lng);
+
+                if (kakaoStation) {
+                    onLocationUpdate(kakaoStation);
+                    setCurrentDisplay(kakaoStation);
+                    // Set 'nearest' object for distance display (calc dist manually since API doesn't return it easily here without more parsing)
+                    // For now, we skip detailed distance or calculate it if 'found' via internal logic matches.
+                    // Let's still try to match internal data for distance info if possible.
+                    const found = findNearestStation(coordinates.lat, coordinates.lng, STATIONS);
+                    if (found && found.name === kakaoStation) {
+                        const dist = getDistanceFromLatLonInKm(coordinates.lat, coordinates.lng, found.lat, found.lng);
+                        setNearest({ station: found, dist });
+                    } else {
+                        setNearest(null); // External source, no internal distance
+                    }
+                } else {
+                    // 2. Fallback to Internal Logic
+                    const found = findNearestStation(coordinates.lat, coordinates.lng, STATIONS);
+                    if (found) {
+                        const dist = getDistanceFromLatLonInKm(
+                            coordinates.lat,
+                            coordinates.lng,
+                            found.lat,
+                            found.lng
+                        );
+                        // Auto-set if close enough (Increased to 20km for easier testing)
+                        if (dist <= 20.0) {
+                            setNearest({ station: found, dist });
+                            onLocationUpdate(found.name);
+                            setCurrentDisplay(found.name);
+                        }
+                    }
                 }
+            } else if (error && !manualLocation) {
+                setCurrentDisplay("위치를 찾을 수 없음");
             }
-        } else if (error && !manualLocation) {
-            setCurrentDisplay("위치를 찾을 수 없음");
-        }
+        };
+
+        syncLocation();
     }, [coordinates, error, manualLocation]);
 
     const handleManualSave = () => {
