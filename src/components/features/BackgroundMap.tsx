@@ -34,10 +34,53 @@ export default function BackgroundMap() {
                     map.addOverlayMapTypeId(window.kakao.maps.MapTypeId.SUBWAY);
 
                     // Optional: Disable some controls for cleaner background look
-                    map.setZoomable(false); // If it's pure background
+                    map.setZoomable(true); // Allow zooming to see different levels as requested
                     map.setDraggable(true); // User can drag? Let's allow drag for now
 
                     setMapInstance(map);
+
+                    // --- Custom Map Styling (Grayscale Base + Vibrant Subway) ---
+                    // Access the internal map panes to style layers individually
+                    const panes = map.getPanes();
+                    if (panes && panes.mapPane) {
+                        const mapPane = panes.mapPane as HTMLElement;
+
+                        // We use a MutationObserver to ensure we catch the layers when they are added
+                        // and re-apply styles if the map redraws (though simple CSS on children might be enough).
+                        // Strategy: 
+                        // The 'mapPane' usually contains:
+                        // 1. Base Map Tile Layer (First Child)
+                        // 2. Overlay Layers (Subway, Traffic, etc.) (Subsequent Children)
+
+                        const applyStyles = () => {
+                            const children = mapPane.children;
+                            if (children.length >= 1) {
+                                // 1. Base Map Layer -> Grayscale & Faded
+                                const baseLayer = children[0] as HTMLElement;
+                                baseLayer.style.filter = "grayscale(100%) brightness(1.2) contrast(0.8) opacity(0.6)";
+
+                                // 2. Subway Layer (if present) -> Enhanced
+                                // It usually appears as the second child if only one overlay is active.
+                                for (let i = 1; i < children.length; i++) {
+                                    const overlayLayer = children[i] as HTMLElement;
+                                    // Make subway lines pop!
+                                    overlayLayer.style.filter = "saturate(200%) contrast(1.5) drop-shadow(0 0 2px rgba(0,0,0,0.3))";
+                                    // Optional: If we want to target ONLY subway, we might need more checks, 
+                                    // but assuming SUBWAY is the only overlay map type added.
+                                }
+                            }
+                        };
+
+                        // Apply immediately
+                        applyStyles();
+
+                        // Observe for changes (e.g. zoom, pan might recreate layers)
+                        const observer = new MutationObserver(() => {
+                            applyStyles();
+                        });
+                        observer.observe(mapPane, { childList: true });
+                    }
+
                 } catch (e) {
                     console.error("Kakao Map Init Error:", e);
                 }
