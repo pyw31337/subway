@@ -15,7 +15,6 @@ export default function BackgroundMap() {
     const { coordinates } = useGeolocation();
     const mapRef = useRef<HTMLDivElement>(null);
     const [mapInstance, setMapInstance] = useState<any>(null);
-    const [debugStatus, setDebugStatus] = useState<string>("Initializing...");
 
     useEffect(() => {
         // Initialize Map
@@ -27,17 +26,21 @@ export default function BackgroundMap() {
 
                     const options = {
                         center: new window.kakao.maps.LatLng(centerLat, centerLng),
-                        level: 3 // Zoom level
+                        level: 8 // Zoom level: 8 (Approx 2km radius)
                     };
                     const map = new window.kakao.maps.Map(mapRef.current, options);
+
+                    // Add Subway Overlay (Always thick lines)
+                    map.addOverlayMapTypeId(window.kakao.maps.MapTypeId.SUBWAY);
+
+                    // Optional: Disable some controls for cleaner background look
+                    map.setZoomable(false); // If it's pure background
+                    map.setDraggable(true); // User can drag? Let's allow drag for now
+
                     setMapInstance(map);
-                    setDebugStatus("Map Rendered Successfully");
                 } catch (e) {
-                    setDebugStatus(`Map Error: ${(e as any).message}`);
                     console.error("Kakao Map Init Error:", e);
                 }
-            } else {
-                setDebugStatus("Kakao Object Missing");
             }
         };
 
@@ -48,8 +51,6 @@ export default function BackgroundMap() {
                 initMap();
             });
         } else {
-            setDebugStatus("Waiting for Script...");
-
             const timer = setInterval(() => {
                 if (window.kakao && window.kakao.maps) {
                     window.kakao.maps.load(() => {
@@ -58,15 +59,6 @@ export default function BackgroundMap() {
                     clearInterval(timer);
                 }
             }, 500);
-
-            // Timeout check
-            setTimeout(() => {
-                if (!window.kakao) {
-                    setDebugStatus("Timeout: Kakao Script Failed to Load. Check network/adblock/domain.");
-                    clearInterval(timer);
-                }
-            }, 10000); // 10 sec timeout
-
             return () => clearInterval(timer);
         }
     }, [coordinates]); // Re-init if coordinates change initially (optional, or rely on panTo below)
@@ -81,20 +73,20 @@ export default function BackgroundMap() {
 
     return (
         <div className="fixed inset-0 z-0">
-            <div ref={mapRef} className="absolute inset-0 w-full h-full" />
+            {/* Map Container - Applied grayscale filter for "Light Gray" look */}
+            {/* Note: This grayscales the SUBWAY overlay too, unfortunately. 
+                Kakao API doesn't support selective tile grayscale. 
+                We use a lower grayscale value (e.g. 80%) to keep some color or mix-blend-mode.
+                OR we try to use CSS to target only the base tiles if possible.
+                For now, let's try a light grayscale + high brightness to make it "light gray".
+            */}
+            <div
+                ref={mapRef}
+                className="absolute inset-0 w-full h-full grayscale-[0.9] brightness-110 contrast-75"
+            />
 
             {/* Optional Overlay to dim map slightly if needed */}
-            <div className="absolute inset-0 bg-white/30 pointer-events-none" />
-
-            {/* Info badge */}
-            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm z-10 flex flex-col items-start">
-                <span className="text-xs text-gray-500 font-medium">
-                    🚇 서울 지하철 실시간 정보 (Kakao Map)
-                </span>
-                <span className="text-[10px] text-red-500 font-bold">
-                    Debug: {debugStatus}
-                </span>
-            </div>
+            <div className="absolute inset-0 bg-white/40 pointer-events-none mix-blend-overlay" />
         </div>
     );
 }
