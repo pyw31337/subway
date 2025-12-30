@@ -28,7 +28,13 @@ body {
 .custom-map-style img[src*="blob"],
 /* Sometimes blob urls */
 .custom-map-style img[src*=".png"]:not([src*="subway"]):not([src*="overlay"]) {
-    filter: grayscale(100%) brightness(130%) contrast(110%);
+    /* 
+       Blur: 1.5px to obscure text strokes 
+       Contrast/Brightness: High to merge blurred text into background 
+       Grayscale: Monotone
+    */
+    filter: grayscale(100%) blur(1.5px) contrast(150%) brightness(150%);
+    opacity: 0.8;
 }
 
 /* Specifically Ensure Subway Overlay is untouched or customized */
