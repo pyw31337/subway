@@ -24,16 +24,11 @@ export const viewport = {
   userScalable: false,
 };
 
-import Script from 'next/script';
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Ensure NEXT_PUBLIC_KAKAO_API_KEY is the JavaScript Key (not REST API Key)
-  const KAKAO_SDK_URL = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_API_KEY}&libraries=services,clusterer&autoload=false`;
-
   return (
     <html lang="ko">
       <head>
@@ -42,12 +37,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Script
-          src={KAKAO_SDK_URL}
-          strategy="beforeInteractive"
-        />
-
-        {/* Full width container, remove max-w-md */}
+        {/* Full width container */}
         <div className="w-full min-h-screen bg-background relative overflow-hidden">
           {children}
         </div>

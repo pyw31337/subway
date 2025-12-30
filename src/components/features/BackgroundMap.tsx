@@ -1,125 +1,85 @@
-import { Map, MapMarker, CustomOverlayMap, ZoomControl, MapTypeId } from "react-kakao-maps-sdk";
+"use client";
+
 import { useEffect, useState } from "react";
 import useGeolocation from "@/hooks/useGeolocation";
 import { motion } from "framer-motion";
 
-declare global {
-    interface Window {
-        kakao: any;
-    }
-}
-
+// Simple fallback map component that doesn't depend on Kakao SDK
+// This ensures the app works even when Kakao API fails
 export default function BackgroundMap() {
-    const { coordinates, error } = useGeolocation();
-    const [center, setCenter] = useState({ lat: 37.5665, lng: 126.9780 }); // Default: City Hall
+    const { coordinates } = useGeolocation();
     const [isMounted, setIsMounted] = useState(false);
-    const [isKakaoReady, setIsKakaoReady] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
-
-        // Safely check if Kakao SDK is loaded
-        const checkKakao = () => {
-            try {
-                if (typeof window !== "undefined" && window.kakao && window.kakao.maps) {
-                    window.kakao.maps.load(() => {
-                        setIsKakaoReady(true);
-                    });
-                }
-            } catch (e) {
-                console.warn("Kakao SDK not available:", e);
-                setIsKakaoReady(false);
-            }
-        };
-
-        // Check immediately
-        checkKakao();
-
-        // Also check after a short delay in case SDK loads late
-        const timer = setTimeout(checkKakao, 1000);
-        return () => clearTimeout(timer);
     }, []);
-
-    // Sync center to user location initially or when updated?
-    // Uber-style: Follow user, but allow panning.
-    // For now, let's snap to user on first load.
-    useEffect(() => {
-        if (coordinates) {
-            setCenter({ lat: coordinates.lat, lng: coordinates.lng });
-        }
-    }, [coordinates]);
-
-    // Dark Mode Style Filter
-    // Invert: White -> Dark
-    // Grayscale: Remove noise
-    // Contrast: Pop features
-    // Light Gray Monotone Style
-    // saturate(0): Grayscale
-    // but we want visible lines. 
-    // Trick: Desaturate heavily (0.1) so background is gray. 
-    // Pure colors (Lines) will also desaturate, but let's try moderate desaturation (0.3) + brightness bump.
-    // Ideally we'd use a custom tile set, but filter is the only way here.
-    const mapStyle = {
-        width: "100%",
-        height: "100%",
-        filter: "grayscale(100%) brightness(1.1) opacity(0.4)" // Just background? No this affects everything.
-        // Wait, if we use opacity, the black bg behind shows through?
-    };
-
-    // REVISED STRATEGY for "Light Gray Map, Colored Lines":
-    // We cannot separate standard Layer lines from map tiles easily.
-    // User requirement "All lines visible" + "Colored" + "Monotone Map".
-    // 
-    // If we can't separate, we must choose: 
-    // A) Standard Map (Not monotone)
-    // B) Monotone Map (Lines also monotone)
-    // C) "Pale" Map (saturate 0.2) -> Lines are weak color.
-
-    // Let's try C with high brightness.
-    const finalStyle = {
-        width: "100%",
-        height: "100%",
-        filter: "saturate(0.1) brightness(1.2) contrast(0.9)"
-    };
 
     if (!isMounted) return <div className="fixed inset-0 bg-gray-100 z-0" />;
 
     return (
-        <div className="fixed inset-0 z-0 bg-gray-100">
-            {/* 1. Only Render Map if SDK is Loaded */}
-            {isKakaoReady ? (
-                <Map
-                    center={center}
-                    style={finalStyle}
-                    level={5}
-                >
-                    {/* Subway Overlay (Built-in) */}
-                    {window.kakao?.maps?.MapTypeId && (
-                        <MapTypeId type={window.kakao.maps.MapTypeId.SUBWAY} />
-                    )}
+        <div className="fixed inset-0 z-0">
+            {/* Stylized subway-themed background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-100 via-gray-50 to-gray-200">
+                {/* Subway line pattern */}
+                <svg className="absolute inset-0 w-full h-full opacity-20" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <pattern id="subway-grid" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+                            <path d="M 100 0 L 0 100" stroke="#00B050" strokeWidth="2" fill="none" />
+                            <path d="M 50 0 L 0 50" stroke="#0052A4" strokeWidth="1.5" fill="none" />
+                            <path d="M 100 50 L 50 100" stroke="#EF7C1C" strokeWidth="1.5" fill="none" />
+                        </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#subway-grid)" />
+                </svg>
 
-                    {/* User Location Marker (Pulse) */}
-                    {coordinates && (
-                        <CustomOverlayMap position={{ lat: coordinates.lat, lng: coordinates.lng }}>
-                            <div className="relative flex items-center justify-center w-8 h-8">
-                                {/* Pulse Ring */}
-                                <motion.div
-                                    className="absolute inset-0 bg-cyan-500 rounded-full opacity-30"
-                                    animate={{ scale: [1, 2], opacity: [0.3, 0] }}
-                                    transition={{ duration: 1.5, repeat: Infinity }}
-                                />
-                                {/* Core Dot (Darker for Light Map) */}
-                                <div className="w-4 h-4 bg-cyan-600 border-2 border-white rounded-full shadow-lg z-10" />
-                            </div>
-                        </CustomOverlayMap>
-                    )}
-                </Map>
-            ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 bg-gradient-to-br from-gray-100 to-gray-200">
-                    <div className="text-4xl mb-2">🚇</div>
-                    <p className="text-sm">지도 서비스 준비 중...</p>
+                {/* Animated gradient orbs */}
+                <motion.div
+                    className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-cyan-400/10 blur-3xl"
+                    animate={{
+                        scale: [1, 1.2, 1],
+                        x: [0, 30, 0],
+                        y: [0, -20, 0]
+                    }}
+                    transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+                />
+                <motion.div
+                    className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-green-400/10 blur-3xl"
+                    animate={{
+                        scale: [1, 1.1, 1],
+                        x: [0, -20, 0],
+                        y: [0, 30, 0]
+                    }}
+                    transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+                />
+            </div>
+
+            {/* User location indicator */}
+            {coordinates && (
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                    <div className="relative flex items-center justify-center">
+                        {/* Pulse Ring */}
+                        <motion.div
+                            className="absolute w-16 h-16 bg-cyan-500 rounded-full opacity-20"
+                            animate={{ scale: [1, 2, 2], opacity: [0.2, 0.1, 0] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                        />
+                        <motion.div
+                            className="absolute w-12 h-12 bg-cyan-500 rounded-full opacity-30"
+                            animate={{ scale: [1, 1.5, 1.5], opacity: [0.3, 0.15, 0] }}
+                            transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                        />
+                        {/* Core Dot */}
+                        <div className="w-6 h-6 bg-cyan-600 border-3 border-white rounded-full shadow-lg z-10" />
+                    </div>
                 </div>
             )}
+
+            {/* Info badge */}
+            <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
+                <span className="text-xs text-gray-500 font-medium">
+                    🚇 서울 지하철 실시간 정보
+                </span>
+            </div>
         </div>
     );
 }

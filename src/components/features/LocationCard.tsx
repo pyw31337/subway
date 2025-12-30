@@ -28,21 +28,23 @@ export default function LocationCard({ onSelectStation, onLocationUpdate }: Loca
     useEffect(() => {
         const syncLocation = async () => {
             if (coordinates && !manualLocation) {
-                // 1. Try Kakao API first
-                const kakaoStation = await fetchNearbyStationsKakao(coordinates.lat, coordinates.lng);
+                // 1. Try Kakao API first (with error handling)
+                let kakaoStation: string | null = null;
+                try {
+                    kakaoStation = await fetchNearbyStationsKakao(coordinates.lat, coordinates.lng);
+                } catch (e) {
+                    console.warn("Kakao API failed, using fallback:", e);
+                }
 
                 if (kakaoStation) {
                     onLocationUpdate(kakaoStation);
                     setCurrentDisplay(kakaoStation);
-                    // Set 'nearest' object for distance display (calc dist manually since API doesn't return it easily here without more parsing)
-                    // For now, we skip detailed distance or calculate it if 'found' via internal logic matches.
-                    // Let's still try to match internal data for distance info if possible.
                     const found = findNearestStation(coordinates.lat, coordinates.lng, STATIONS);
                     if (found && found.name === kakaoStation) {
                         const dist = getDistanceFromLatLonInKm(coordinates.lat, coordinates.lng, found.lat, found.lng);
                         setNearest({ station: found, dist });
                     } else {
-                        setNearest(null); // External source, no internal distance
+                        setNearest(null);
                     }
                 } else {
                     // 2. Fallback to Internal Logic
