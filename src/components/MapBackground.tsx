@@ -18,14 +18,17 @@ export default function MapBackground() {
                     const options = {
                         center: new window.kakao.maps.LatLng(37.5665, 126.9780), // Seoul City Hall
                         level: 7,
+                        draggable: true,
+                        scrollwheel: true,
+                        disableDoubleClickZoom: false,
                     };
                     const map = new window.kakao.maps.Map(mapContainer.current, options);
 
-                    // Disable map controls for a pure "background" feel? 
-                    // The user asked for "background map", usually implies limited interaction, but "zoomable" was mentioned in previous chats.
-                    // For now, I'll valid defaults.
+                    // Add Subway Overlay
+                    map.addOverlayMapTypeId(window.kakao.maps.MapTypeId.SUBWAY);
 
-                    // Optional: Add strict boundary checks if needed later.
+                    // Note: Standard map styling used to ensure subway lines are colored.
+                    // Advanced styling (white background) would require custom tiles or complex CSS.
                 });
             } else {
                 // Retry if script not yet loaded
@@ -39,8 +42,8 @@ export default function MapBackground() {
     return (
         <div
             ref={mapContainer}
-            className="absolute inset-0 w-full h-full -z-10 filter grayscale brightness-110 contrast-75"
-        // grayscale: monotone, brightness/contrast: adjustment for "light gray" feel
+            className="absolute inset-0 w-full h-full -z-10"
+        // Removed grayscale filter to allow Colored Subway Lines to show.
         />
     );
 }
