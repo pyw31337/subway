@@ -43,14 +43,18 @@ export default function BackgroundMap() {
 
         // If Kakao SDK is already loaded
         if (window.kakao && window.kakao.maps) {
-            initMap();
+            // Because we use autoload=false, we must call .load()
+            window.kakao.maps.load(() => {
+                initMap();
+            });
         } else {
             setDebugStatus("Waiting for Script...");
-            // Wait for script onLoad if needed, or retry
-            // Since we use strategy="beforeInteractive", it should be ready, but just in case
+
             const timer = setInterval(() => {
                 if (window.kakao && window.kakao.maps) {
-                    initMap();
+                    window.kakao.maps.load(() => {
+                        initMap();
+                    });
                     clearInterval(timer);
                 }
             }, 500);
