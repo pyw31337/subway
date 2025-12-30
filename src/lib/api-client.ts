@@ -87,7 +87,7 @@ export async function fetchNavigation(start: string, end: string): Promise<any> 
  * Docs: https://developers.kakao.com/docs/latest/ko/local/dev-guide#search-category
  */
 export async function fetchNearbyStationsKakao(lat: number, lng: number): Promise<string | null> {
-    const KAKAO_KEY = "40164dae4ca4e58ecabbdc2d104b4517"; // REST API Key
+    const KAKAO_KEY = "e18ee199818819d830c3fe479aa1ca71"; // REST API Key
 
     // If no key, fallback to null (caller handles fallback)
     if (!KAKAO_KEY) {
