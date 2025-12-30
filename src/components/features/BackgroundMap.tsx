@@ -72,21 +72,15 @@ export default function BackgroundMap() {
     }, [coordinates, mapInstance]);
 
     return (
-        <div className="fixed inset-0 z-0">
-            {/* Map Container - Applied grayscale filter for "Light Gray" look */}
-            {/* Note: This grayscales the SUBWAY overlay too, unfortunately. 
-                Kakao API doesn't support selective tile grayscale. 
-                We use a lower grayscale value (e.g. 80%) to keep some color or mix-blend-mode.
-                OR we try to use CSS to target only the base tiles if possible.
-                For now, let's try a light grayscale + high brightness to make it "light gray".
-            */}
+        <div className="fixed inset-0 z-0 kakao-map-custom">
+            {/* Map Container - Applied custom class for selective grayscale */}
             <div
                 ref={mapRef}
-                className="absolute inset-0 w-full h-full grayscale-[0.9] brightness-110 contrast-75"
+                className="absolute inset-0 w-full h-full"
             />
 
             {/* Optional Overlay to dim map slightly if needed */}
-            <div className="absolute inset-0 bg-white/40 pointer-events-none mix-blend-overlay" />
+            <div className="absolute inset-0 bg-white/20 pointer-events-none mix-blend-overlay" />
         </div>
     );
 }

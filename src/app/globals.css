@@ -1,4 +1,19 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Map Styles to Grayscale Base Tiles but Keep Overlays (Subway) Colored */
+.kakao-map-custom img[src*="map_2d"],
+.kakao-map-custom img[src*="map_skyview"],
+.kakao-map-custom img[src*="map_hybrid"] {
+  filter: grayscale(100%) brightness(110%) contrast(90%);
+}
+
+/* Ensure Subway overlay and other markers stay colored */
+.kakao-map-custom img[src*="map_subway"] {
+  filter: none;
+}
 
 :root {
   --background: #111111;
