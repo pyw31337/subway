@@ -13,9 +13,31 @@ export default function BackgroundMap() {
     const { coordinates, error } = useGeolocation();
     const [center, setCenter] = useState({ lat: 37.5665, lng: 126.9780 }); // Default: City Hall
     const [isMounted, setIsMounted] = useState(false);
+    const [isKakaoReady, setIsKakaoReady] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
+
+        // Safely check if Kakao SDK is loaded
+        const checkKakao = () => {
+            try {
+                if (typeof window !== "undefined" && window.kakao && window.kakao.maps) {
+                    window.kakao.maps.load(() => {
+                        setIsKakaoReady(true);
+                    });
+                }
+            } catch (e) {
+                console.warn("Kakao SDK not available:", e);
+                setIsKakaoReady(false);
+            }
+        };
+
+        // Check immediately
+        checkKakao();
+
+        // Also check after a short delay in case SDK loads late
+        const timer = setTimeout(checkKakao, 1000);
+        return () => clearTimeout(timer);
     }, []);
 
     // Sync center to user location initially or when updated?
@@ -64,15 +86,15 @@ export default function BackgroundMap() {
 
     return (
         <div className="fixed inset-0 z-0 bg-gray-100">
-            {/* 1. Only Render Map if SDK is Loaded to prevent Crash on 401 */}
-            {typeof window !== "undefined" && window.kakao ? (
+            {/* 1. Only Render Map if SDK is Loaded */}
+            {isKakaoReady ? (
                 <Map
                     center={center}
                     style={finalStyle}
-                    level={5} // Zoom Level (Subway lines visible?)
+                    level={5}
                 >
                     {/* Subway Overlay (Built-in) */}
-                    {window.kakao.maps.MapTypeId && (
+                    {window.kakao?.maps?.MapTypeId && (
                         <MapTypeId type={window.kakao.maps.MapTypeId.SUBWAY} />
                     )}
 
@@ -93,8 +115,9 @@ export default function BackgroundMap() {
                     )}
                 </Map>
             ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-200">
-                    <p>Map Loading...</p>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 bg-gradient-to-br from-gray-100 to-gray-200">
+                    <div className="text-4xl mb-2">🚇</div>
+                    <p className="text-sm">지도 서비스 준비 중...</p>
                 </div>
             )}
         </div>
