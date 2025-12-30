@@ -39,8 +39,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Script
-          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=3bd7b4c9244a56511fd768a4bba6d71f&libraries=services,clusterer&autoload=false`}
-          strategy="beforeInteractive"
+          src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=3bd7b4c9244a56511fd768a4bba6d71f&libraries=services,clusterer&autoload=false"
+          strategy="afterInteractive"
         />
         {/* Full width container */}
         <div className="w-full min-h-screen bg-background relative overflow-hidden">

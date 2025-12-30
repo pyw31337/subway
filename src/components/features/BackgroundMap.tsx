@@ -58,10 +58,10 @@ export default function BackgroundMap() {
             // Timeout check
             setTimeout(() => {
                 if (!window.kakao) {
-                    setDebugStatus("Timeout: Kakao Script Failed to Load. Check API Key/Domain.");
+                    setDebugStatus("Timeout: Kakao Script Failed to Load. Check network/adblock/domain.");
                     clearInterval(timer);
                 }
-            }, 5000); // 5 sec timeout
+            }, 10000); // 10 sec timeout
 
             return () => clearInterval(timer);
         }
