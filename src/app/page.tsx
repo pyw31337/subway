@@ -28,7 +28,7 @@ export default function Home() {
 
   return (
     <ErrorBoundary>
-      <main className="relative w-full h-full min-h-screen overflow-hidden text-gray-800 font-sans selection:bg-cyan-500/30 bg-gray-100">
+      <main className="relative w-full h-full min-h-screen overflow-hidden text-gray-800 font-sans selection:bg-cyan-500/30">
 
         {/* 1. Full Screen Map (Z-0) */}
         <BackgroundMap />
