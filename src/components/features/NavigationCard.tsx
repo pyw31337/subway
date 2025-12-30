@@ -14,15 +14,8 @@ export default function NavigationCard({ currentStation, initialDestination, onC
     const [destination, setDestination] = useState(initialDestination || "");
     const [mode, setMode] = useState<"INPUT" | "GUIDE">(initialDestination ? "GUIDE" : "INPUT");
     const [loading, setLoading] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [routeData, setRouteData] = useState<any>(null);
-
-    // Auto-search if initialDestination is provided
-    useEffect(() => {
-        if (initialDestination) {
-            setDestination(initialDestination);
-            startNavigation(initialDestination);
-        }
-    }, [initialDestination]);
 
     const startNavigation = async (destOverride?: string) => {
         const target = destOverride || destination;
@@ -52,6 +45,15 @@ export default function NavigationCard({ currentStation, initialDestination, onC
             setLoading(false);
         }
     };
+
+    // Auto-search if initialDestination is provided
+    useEffect(() => {
+        if (initialDestination) {
+            setDestination(initialDestination);
+            startNavigation(initialDestination);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialDestination]);
 
     const openApp = (app: "kakao" | "naver") => {
         const startEnc = encodeURIComponent(currentStation + "역");
@@ -111,7 +113,6 @@ export default function NavigationCard({ currentStation, initialDestination, onC
             </div>
         );
     }
-
 
     const stationNames = routeData.shtStatnNm.split(",").map((s: string) => s.trim()).filter(Boolean);
     const stationIds = routeData.shtStatnId.split(",").map((s: string) => s.trim()).filter(Boolean);
@@ -224,7 +225,7 @@ export default function NavigationCard({ currentStation, initialDestination, onC
                     {stationNames.map((station: string, idx: number) => {
                         const isStart = idx === 0;
                         const isEnd = idx === stationNames.length - 1;
-                        const color = getStationColor(idx);
+                        // const color = getStationColor(idx); // UNUSED, removing
 
                         return (
                             <motion.div

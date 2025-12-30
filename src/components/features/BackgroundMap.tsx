@@ -64,32 +64,39 @@ export default function BackgroundMap() {
 
     return (
         <div className="fixed inset-0 z-0 bg-gray-100">
-            <Map
-                center={center}
-                style={finalStyle}
-                level={5} // Zoom Level (Subway lines visible?)
-            >
-                {/* 1. Subway Overlay (Built-in) */}
-                {window.kakao && window.kakao.maps && window.kakao.maps.MapTypeId && (
-                    <MapTypeId type={window.kakao.maps.MapTypeId.SUBWAY} />
-                )}
+            {/* 1. Only Render Map if SDK is Loaded to prevent Crash on 401 */}
+            {typeof window !== "undefined" && window.kakao ? (
+                <Map
+                    center={center}
+                    style={finalStyle}
+                    level={5} // Zoom Level (Subway lines visible?)
+                >
+                    {/* Subway Overlay (Built-in) */}
+                    {window.kakao.maps.MapTypeId && (
+                        <MapTypeId type={window.kakao.maps.MapTypeId.SUBWAY} />
+                    )}
 
-                {/* 2. User Location Marker (Pulse) */}
-                {coordinates && (
-                    <CustomOverlayMap position={{ lat: coordinates.lat, lng: coordinates.lng }}>
-                        <div className="relative flex items-center justify-center w-8 h-8">
-                            {/* Pulse Ring */}
-                            <motion.div
-                                className="absolute inset-0 bg-cyan-500 rounded-full opacity-30"
-                                animate={{ scale: [1, 2], opacity: [0.3, 0] }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
-                            />
-                            {/* Core Dot (Darker for Light Map) */}
-                            <div className="w-4 h-4 bg-cyan-600 border-2 border-white rounded-full shadow-lg z-10" />
-                        </div>
-                    </CustomOverlayMap>
-                )}
-            </Map>
+                    {/* User Location Marker (Pulse) */}
+                    {coordinates && (
+                        <CustomOverlayMap position={{ lat: coordinates.lat, lng: coordinates.lng }}>
+                            <div className="relative flex items-center justify-center w-8 h-8">
+                                {/* Pulse Ring */}
+                                <motion.div
+                                    className="absolute inset-0 bg-cyan-500 rounded-full opacity-30"
+                                    animate={{ scale: [1, 2], opacity: [0.3, 0] }}
+                                    transition={{ duration: 1.5, repeat: Infinity }}
+                                />
+                                {/* Core Dot (Darker for Light Map) */}
+                                <div className="w-4 h-4 bg-cyan-600 border-2 border-white rounded-full shadow-lg z-10" />
+                            </div>
+                        </CustomOverlayMap>
+                    )}
+                </Map>
+            ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-gray-400 bg-gray-200">
+                    <p>Map Loading...</p>
+                </div>
+            )}
         </div>
     );
 }

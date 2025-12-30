@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, MapPin, ArrowRight, Navigation } from "lucide-react";
 import { motion } from "framer-motion";
 

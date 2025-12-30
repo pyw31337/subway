@@ -34,6 +34,7 @@ export async function fetchArrivals(station: string): Promise<RealtimeArrival[]>
     return data.realtimeArrivalList || [];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function fetchNavigation(start: string, end: string): Promise<any> {
     if (IS_PRODUCTION) {
         // Option A: Try Real API via CORS Proxy

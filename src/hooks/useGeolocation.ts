@@ -35,13 +35,16 @@ export default function useGeolocation() {
 
     useEffect(() => {
         if (!("geolocation" in navigator)) {
-            onError({
-                code: 0,
-                message: "Geolocation not supported",
-                PERMISSION_DENIED: 1,
-                POSITION_UNAVAILABLE: 2,
-                TIMEOUT: 3,
-            } as GeolocationPositionError);
+            // Prevent synchronous setState in effect
+            Promise.resolve().then(() => {
+                onError({
+                    code: 0,
+                    message: "Geolocation not supported",
+                    PERMISSION_DENIED: 1,
+                    POSITION_UNAVAILABLE: 2,
+                    TIMEOUT: 3,
+                } as GeolocationPositionError);
+            });
             return;
         }
 
