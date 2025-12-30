@@ -1,83 +1,72 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import useGeolocation from "@/hooks/useGeolocation";
 import { motion } from "framer-motion";
 
-// Simple fallback map component that doesn't depend on Kakao SDK
-// This ensures the app works even when Kakao API fails
+// Declare global kakao object
+declare global {
+    interface Window {
+        kakao: any;
+    }
+}
+
 export default function BackgroundMap() {
     const { coordinates } = useGeolocation();
-    const [isMounted, setIsMounted] = useState(false);
+    const mapRef = useRef<HTMLDivElement>(null);
+    const [mapInstance, setMapInstance] = useState<any>(null);
 
     useEffect(() => {
-        setIsMounted(true);
-    }, []);
+        // Initialize Map
+        const initMap = () => {
+            if (window.kakao && window.kakao.maps && mapRef.current) {
+                const centerLat = coordinates ? coordinates.lat : 37.498095; // Default: Gangnam
+                const centerLng = coordinates ? coordinates.lng : 127.027610;
 
-    if (!isMounted) return <div className="fixed inset-0 bg-gray-100 z-0" />;
+                const options = {
+                    center: new window.kakao.maps.LatLng(centerLat, centerLng),
+                    level: 3 // Zoom level
+                };
+                const map = new window.kakao.maps.Map(mapRef.current, options);
+                setMapInstance(map);
+            }
+        };
+
+        // If Kakao SDK is already loaded
+        if (window.kakao && window.kakao.maps) {
+            initMap();
+        } else {
+            // Wait for script onLoad if needed, or retry
+            // Since we use strategy="beforeInteractive", it should be ready, but just in case
+            const timer = setInterval(() => {
+                if (window.kakao && window.kakao.maps) {
+                    initMap();
+                    clearInterval(timer);
+                }
+            }, 500);
+            return () => clearInterval(timer);
+        }
+    }, [coordinates]); // Re-init if coordinates change initially (optional, or rely on panTo below)
+
+    // Update center when coordinates change
+    useEffect(() => {
+        if (mapInstance && coordinates) {
+            const moveLatLon = new window.kakao.maps.LatLng(coordinates.lat, coordinates.lng);
+            mapInstance.panTo(moveLatLon);
+        }
+    }, [coordinates, mapInstance]);
 
     return (
         <div className="fixed inset-0 z-0">
-            {/* Stylized subway-themed background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-gray-100 via-gray-50 to-gray-200">
-                {/* Subway line pattern */}
-                <svg className="absolute inset-0 w-full h-full opacity-20" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <pattern id="subway-grid" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-                            <path d="M 100 0 L 0 100" stroke="#00B050" strokeWidth="2" fill="none" />
-                            <path d="M 50 0 L 0 50" stroke="#0052A4" strokeWidth="1.5" fill="none" />
-                            <path d="M 100 50 L 50 100" stroke="#EF7C1C" strokeWidth="1.5" fill="none" />
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#subway-grid)" />
-                </svg>
+            <div ref={mapRef} className="absolute inset-0 w-full h-full" />
 
-                {/* Animated gradient orbs */}
-                <motion.div
-                    className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-cyan-400/10 blur-3xl"
-                    animate={{
-                        scale: [1, 1.2, 1],
-                        x: [0, 30, 0],
-                        y: [0, -20, 0]
-                    }}
-                    transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-                />
-                <motion.div
-                    className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-green-400/10 blur-3xl"
-                    animate={{
-                        scale: [1, 1.1, 1],
-                        x: [0, -20, 0],
-                        y: [0, 30, 0]
-                    }}
-                    transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-                />
-            </div>
-
-            {/* User location indicator */}
-            {coordinates && (
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                    <div className="relative flex items-center justify-center">
-                        {/* Pulse Ring */}
-                        <motion.div
-                            className="absolute w-16 h-16 bg-cyan-500 rounded-full opacity-20"
-                            animate={{ scale: [1, 2, 2], opacity: [0.2, 0.1, 0] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                        />
-                        <motion.div
-                            className="absolute w-12 h-12 bg-cyan-500 rounded-full opacity-30"
-                            animate={{ scale: [1, 1.5, 1.5], opacity: [0.3, 0.15, 0] }}
-                            transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                        />
-                        {/* Core Dot */}
-                        <div className="w-6 h-6 bg-cyan-600 border-3 border-white rounded-full shadow-lg z-10" />
-                    </div>
-                </div>
-            )}
+            {/* Optional Overlay to dim map slightly if needed */}
+            <div className="absolute inset-0 bg-white/30 pointer-events-none" />
 
             {/* Info badge */}
-            <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
+            <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm z-10">
                 <span className="text-xs text-gray-500 font-medium">
-                    🚇 서울 지하철 실시간 정보
+                    🚇 서울 지하철 실시간 정보 (Kakao Map)
                 </span>
             </div>
         </div>
