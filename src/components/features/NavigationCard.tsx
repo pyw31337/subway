@@ -101,6 +101,18 @@ export default function NavigationCard({ currentStation, initialDestination, onC
     // shtStatnNm: "강남, 역삼, 선릉..." (Comma separated)
     // shtStatnId: "1002000222, 1002000223..." (To deduce lines)
 
+    if (!routeData) {
+        return (
+            <div className="bg-[#1C1C1E] border border-gray-700 rounded-3xl p-6 mb-6 h-[400px] flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-8 h-8 border-4 border-[#00B050]/30 border-t-[#00B050] rounded-full animate-spin" />
+                    <p className="text-gray-400 text-sm font-bold animate-pulse">경로 탐색 중...</p>
+                </div>
+            </div>
+        );
+    }
+
+
     const stationNames = routeData.shtStatnNm.split(",").map((s: string) => s.trim()).filter(Boolean);
     const stationIds = routeData.shtStatnId.split(",").map((s: string) => s.trim()).filter(Boolean);
 
