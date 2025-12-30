@@ -1,52 +1,26 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
-import Script from 'next/script';
 import './globals.css';
-
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+import Script from 'next/script';
 
 export const metadata: Metadata = {
-  title: 'Seoul Subway Live',
-  description: 'Real-time GPS navigation for Seoul Subway',
-};
-
-export const viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+    title: 'Seoul Subway Live',
+    description: 'Real-time GPS navigation for Seoul Subway',
 };
 
 export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="ko">
-      <head>
-        {/* Preload generic styles if needed */}
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Script
-          src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=0236cfffa7cfef34abacd91a6d7c73c0&libraries=services,clusterer&autoload=false"
-          strategy="afterInteractive"
-        />
-        {/* Full width container */}
-        <div className="w-full min-h-screen bg-background relative overflow-hidden">
-          {children}
-        </div>
-      </body>
-    </html>
-  );
+    children,
+}: {
+    children: React.ReactNode;
+}) {
+    return (
+        <html lang="ko">
+            <body>
+                <Script
+                    src="//dapi.kakao.com/v2/maps/sdk.js?appkey=0236cfffa7cfef34abacd91a6d7c73c0&libraries=services,clusterer&autoload=false"
+                    strategy="afterInteractive"
+                />
+                {children}
+            </body>
+        </html>
+    );
 }
