@@ -12,3 +12,32 @@ body {
     background: var(--background);
     font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Custom Map Styling */
+.custom-map-style div[style*="background-image"] {
+    /* Sometimes background tiles are divs? Try targeting images first */
+}
+
+/* 
+   Target Kakao Map Tiles.
+   Base tiles usually come from map.daumcdn.net/map_2d/ 
+   or similarly structued URLs. 
+   We want: HIGH CONTRAST, BRIGHT (white background), GRAYSCALE
+*/
+.custom-map-style img[src*="map_2d"],
+.custom-map-style img[src*="blob"],
+/* Sometimes blob urls */
+.custom-map-style img[src*=".png"]:not([src*="subway"]):not([src*="overlay"]) {
+    filter: grayscale(100%) brightness(130%) contrast(110%);
+}
+
+/* Specifically Ensure Subway Overlay is untouched or customized */
+.custom-map-style img[src*="subway"] {
+    filter: none !important;
+}
+
+/* 
+   Fallback: If structure is obscure, we might simply apply to ALL images
+   and exclude known markers/overlays if possible. 
+   Risk: "subway" in src is a guess.
+*/

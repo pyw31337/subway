@@ -42,8 +42,8 @@ export default function MapBackground() {
     return (
         <div
             ref={mapContainer}
-            className="absolute inset-0 w-full h-full -z-10"
-        // Removed grayscale filter to allow Colored Subway Lines to show.
+            className="custom-map-style absolute inset-0 w-full h-full -z-10"
+        // Removed grayscale filter from Tailwind classes; handling via global CSS
         />
     );
 }
