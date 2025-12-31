@@ -1,11 +1,11 @@
-// Seoul Subway Stations Data
-// Contains coordinates for major stations on each line
+// Seoul Metropolitan Subway Complete Station Data
+// All stations operated by Seoul Metro (1-9, Shinbundang, Airport, Gyeongui-Jungang, etc.)
 
 export interface Station {
     name: string;
     lat: number;
     lng: number;
-    lines: string[]; // Which line numbers pass through
+    lines: string[];
 }
 
 export interface SubwayLine {
@@ -16,43 +16,90 @@ export interface SubwayLine {
 }
 
 export const SUBWAY_LINES: SubwayLine[] = [
-    // Line 1 (Dark Blue)
+    // ===== LINE 1 (Dark Blue) =====
     {
         id: "1",
         name: "1호선",
         color: "#0052A4",
         stations: [
+            // 소요산 방면
             { name: "소요산", lat: 37.9474, lng: 127.0617, lines: ["1"] },
             { name: "동두천", lat: 37.9034, lng: 127.0609, lines: ["1"] },
+            { name: "보산", lat: 37.8954, lng: 127.0618, lines: ["1"] },
+            { name: "동두천중앙", lat: 37.8869, lng: 127.0613, lines: ["1"] },
+            { name: "지행", lat: 37.8724, lng: 127.0605, lines: ["1"] },
+            { name: "덕정", lat: 37.8537, lng: 127.0556, lines: ["1"] },
+            { name: "덕계", lat: 37.8286, lng: 127.0489, lines: ["1"] },
+            { name: "양주", lat: 37.8109, lng: 127.0456, lines: ["1"] },
+            { name: "녹양", lat: 37.7857, lng: 127.0444, lines: ["1"] },
+            { name: "가능", lat: 37.7705, lng: 127.0442, lines: ["1"] },
             { name: "의정부", lat: 37.7381, lng: 127.0459, lines: ["1"] },
             { name: "회룡", lat: 37.7193, lng: 127.0441, lines: ["1"] },
-            { name: "도봉산", lat: 37.6897, lng: 127.0447, lines: ["1"] },
+            { name: "망월사", lat: 37.7041, lng: 127.0439, lines: ["1"] },
+            { name: "도봉산", lat: 37.6897, lng: 127.0447, lines: ["1", "7"] },
+            { name: "도봉", lat: 37.6790, lng: 127.0466, lines: ["1"] },
+            { name: "방학", lat: 37.6689, lng: 127.0395, lines: ["1"] },
             { name: "창동", lat: 37.6529, lng: 127.0476, lines: ["1", "4"] },
-            { name: "석계", lat: 37.6149, lng: 127.0661, lines: ["1", "6"] },
+            { name: "녹천", lat: 37.6434, lng: 127.0538, lines: ["1"] },
+            { name: "월계", lat: 37.6324, lng: 127.0585, lines: ["1"] },
             { name: "광운대", lat: 37.6221, lng: 127.0612, lines: ["1"] },
-            { name: "청량리", lat: 37.5807, lng: 127.0470, lines: ["1"] },
+            { name: "석계", lat: 37.6149, lng: 127.0661, lines: ["1", "6"] },
+            { name: "신이문", lat: 37.5964, lng: 127.0573, lines: ["1"] },
+            { name: "외대앞", lat: 37.5895, lng: 127.0560, lines: ["1"] },
+            { name: "회기", lat: 37.5896, lng: 127.0579, lines: ["1", "K"] },
+            { name: "청량리", lat: 37.5807, lng: 127.0470, lines: ["1", "K"] },
+            { name: "제기동", lat: 37.5786, lng: 127.0369, lines: ["1"] },
+            { name: "신설동", lat: 37.5757, lng: 127.0249, lines: ["1", "2"] },
+            { name: "동묘앞", lat: 37.5728, lng: 127.0157, lines: ["1", "6"] },
             { name: "동대문", lat: 37.5715, lng: 127.0099, lines: ["1", "4"] },
+            { name: "종로5가", lat: 37.5710, lng: 127.0020, lines: ["1"] },
             { name: "종로3가", lat: 37.5710, lng: 126.9917, lines: ["1", "3", "5"] },
             { name: "종각", lat: 37.5701, lng: 126.9832, lines: ["1"] },
             { name: "시청", lat: 37.5658, lng: 126.9769, lines: ["1", "2"] },
-            { name: "서울역", lat: 37.5546, lng: 126.9707, lines: ["1", "4", "K"] },
+            { name: "서울역", lat: 37.5546, lng: 126.9707, lines: ["1", "4", "K", "A"] },
             { name: "남영", lat: 37.5411, lng: 126.9712, lines: ["1"] },
             { name: "용산", lat: 37.5300, lng: 126.9647, lines: ["1", "K"] },
             { name: "노량진", lat: 37.5135, lng: 126.9417, lines: ["1", "9"] },
+            { name: "대방", lat: 37.5132, lng: 126.9267, lines: ["1"] },
+            { name: "신길", lat: 37.5175, lng: 126.9174, lines: ["1", "5"] },
             { name: "영등포", lat: 37.5156, lng: 126.9077, lines: ["1"] },
             { name: "신도림", lat: 37.5088, lng: 126.8913, lines: ["1", "2"] },
+            // 인천 방면
             { name: "구로", lat: 37.5035, lng: 126.8824, lines: ["1"] },
-            { name: "가산디지털단지", lat: 37.4816, lng: 126.8826, lines: ["1", "7"] },
-            { name: "금천구청", lat: 37.4568, lng: 126.8956, lines: ["1"] },
+            { name: "구일", lat: 37.4936, lng: 126.8545, lines: ["1"] },
+            { name: "개봉", lat: 37.4933, lng: 126.8457, lines: ["1"] },
+            { name: "오류동", lat: 37.4939, lng: 126.8373, lines: ["1"] },
+            { name: "온수", lat: 37.4924, lng: 126.8239, lines: ["1", "7"] },
+            { name: "역곡", lat: 37.4866, lng: 126.8057, lines: ["1"] },
+            { name: "소사", lat: 37.4816, lng: 126.7941, lines: ["1"] },
+            { name: "부천", lat: 37.4826, lng: 126.7829, lines: ["1"] },
+            { name: "중동", lat: 37.4869, lng: 126.7675, lines: ["1"] },
+            { name: "송내", lat: 37.4886, lng: 126.7532, lines: ["1"] },
+            { name: "부개", lat: 37.4882, lng: 126.7407, lines: ["1"] },
+            { name: "부평", lat: 37.4894, lng: 126.7233, lines: ["1"] },
+            { name: "백운", lat: 37.4829, lng: 126.7098, lines: ["1"] },
+            { name: "동암", lat: 37.4736, lng: 126.6992, lines: ["1"] },
+            { name: "간석", lat: 37.4648, lng: 126.6922, lines: ["1"] },
+            { name: "주안", lat: 37.4651, lng: 126.6805, lines: ["1"] },
+            { name: "도화", lat: 37.4661, lng: 126.6637, lines: ["1"] },
+            { name: "제물포", lat: 37.4614, lng: 126.6517, lines: ["1"] },
+            { name: "도원", lat: 37.4588, lng: 126.6417, lines: ["1"] },
+            { name: "동인천", lat: 37.4731, lng: 126.6351, lines: ["1"] },
             { name: "인천", lat: 37.4562, lng: 126.7315, lines: ["1"] },
+            // 광명, 서동탄 방면
+            { name: "가산디지털단지", lat: 37.4816, lng: 126.8826, lines: ["1", "7"] },
+            { name: "독산", lat: 37.4713, lng: 126.8953, lines: ["1"] },
+            { name: "금천구청", lat: 37.4568, lng: 126.8956, lines: ["1"] },
+            { name: "광명", lat: 37.4154, lng: 126.8847, lines: ["1"] },
         ],
     },
-    // Line 2 (Green - Loop)
+    // ===== LINE 2 (Green - Loop + Branches) =====
     {
         id: "2",
         name: "2호선",
         color: "#3CB44B",
         stations: [
+            // 본선 순환
             { name: "시청", lat: 37.5658, lng: 126.9769, lines: ["1", "2"] },
             { name: "을지로입구", lat: 37.5661, lng: 126.9822, lines: ["2"] },
             { name: "을지로3가", lat: 37.5665, lng: 126.9920, lines: ["2", "3"] },
@@ -82,11 +129,15 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "낙성대", lat: 37.4768, lng: 126.9636, lines: ["2"] },
             { name: "서울대입구", lat: 37.4812, lng: 126.9528, lines: ["2"] },
             { name: "봉천", lat: 37.4825, lng: 126.9419, lines: ["2"] },
-            { name: "신림", lat: 37.4840, lng: 126.9296, lines: ["2"] },
+            { name: "신림", lat: 37.4840, lng: 126.9296, lines: ["2", "신림"] },
             { name: "신대방", lat: 37.4875, lng: 126.9133, lines: ["2"] },
             { name: "구로디지털단지", lat: 37.4851, lng: 126.9015, lines: ["2"] },
             { name: "대림", lat: 37.4932, lng: 126.8950, lines: ["2", "7"] },
             { name: "신도림", lat: 37.5088, lng: 126.8913, lines: ["1", "2"] },
+            { name: "도림천", lat: 37.5160, lng: 126.8929, lines: ["2"] },
+            { name: "양천구청", lat: 37.5180, lng: 126.8666, lines: ["2"] },
+            { name: "신정네거리", lat: 37.5148, lng: 126.8539, lines: ["2"] },
+            { name: "까치산", lat: 37.5315, lng: 126.8471, lines: ["2", "5"] },
             { name: "문래", lat: 37.5178, lng: 126.8995, lines: ["2"] },
             { name: "영등포구청", lat: 37.5226, lng: 126.9055, lines: ["2", "5"] },
             { name: "당산", lat: 37.5347, lng: 126.9025, lines: ["2", "9"] },
@@ -96,9 +147,14 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "이대", lat: 37.5568, lng: 126.9461, lines: ["2"] },
             { name: "아현", lat: 37.5575, lng: 126.9562, lines: ["2"] },
             { name: "충정로", lat: 37.5600, lng: 126.9635, lines: ["2", "5"] },
+            // 성수지선
+            { name: "용답", lat: 37.5713, lng: 127.0559, lines: ["2"] },
+            { name: "신답", lat: 37.5754, lng: 127.0631, lines: ["2"] },
+            { name: "용두", lat: 37.5773, lng: 127.0385, lines: ["2"] },
+            { name: "신설동", lat: 37.5757, lng: 127.0249, lines: ["1", "2"] },
         ],
     },
-    // Line 3 (Orange)
+    // ===== LINE 3 (Orange) =====
     {
         id: "3",
         name: "3호선",
@@ -107,7 +163,15 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "대화", lat: 37.6764, lng: 126.7934, lines: ["3"] },
             { name: "주엽", lat: 37.6700, lng: 126.7873, lines: ["3"] },
             { name: "정발산", lat: 37.6636, lng: 126.7726, lines: ["3"] },
+            { name: "마두", lat: 37.6527, lng: 126.7795, lines: ["3"] },
+            { name: "백석", lat: 37.6381, lng: 126.7871, lines: ["3"] },
+            { name: "대곡", lat: 37.6532, lng: 126.7470, lines: ["3", "K"] },
             { name: "화정", lat: 37.6329, lng: 126.8322, lines: ["3"] },
+            { name: "원당", lat: 37.6524, lng: 126.8175, lines: ["3"] },
+            { name: "원흥", lat: 37.6608, lng: 126.8261, lines: ["3"] },
+            { name: "삼송", lat: 37.6489, lng: 126.8326, lines: ["3"] },
+            { name: "지축", lat: 37.6380, lng: 126.9134, lines: ["3"] },
+            { name: "구파발", lat: 37.6366, lng: 126.9187, lines: ["3"] },
             { name: "연신내", lat: 37.6190, lng: 126.9210, lines: ["3", "6"] },
             { name: "불광", lat: 37.6103, lng: 126.9303, lines: ["3", "6"] },
             { name: "녹번", lat: 37.6008, lng: 126.9365, lines: ["3"] },
@@ -124,7 +188,7 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "금호", lat: 37.5475, lng: 127.0185, lines: ["3"] },
             { name: "옥수", lat: 37.5407, lng: 127.0175, lines: ["3", "K"] },
             { name: "압구정", lat: 37.5272, lng: 127.0284, lines: ["3"] },
-            { name: "신사", lat: 37.5163, lng: 127.0202, lines: ["3"] },
+            { name: "신사", lat: 37.5163, lng: 127.0202, lines: ["3", "신분당"] },
             { name: "잠원", lat: 37.5118, lng: 127.0138, lines: ["3"] },
             { name: "고속터미널", lat: 37.5049, lng: 127.0047, lines: ["3", "7", "9"] },
             { name: "교대", lat: 37.4934, lng: 127.0137, lines: ["2", "3"] },
@@ -142,7 +206,7 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "오금", lat: 37.5023, lng: 127.1285, lines: ["3", "5"] },
         ],
     },
-    // Line 4 (Sky Blue)
+    // ===== LINE 4 (Sky Blue) =====
     {
         id: "4",
         name: "4호선",
@@ -168,7 +232,7 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "충무로", lat: 37.5613, lng: 126.9946, lines: ["3", "4"] },
             { name: "명동", lat: 37.5609, lng: 126.9863, lines: ["4"] },
             { name: "회현", lat: 37.5581, lng: 126.9788, lines: ["4"] },
-            { name: "서울역", lat: 37.5546, lng: 126.9707, lines: ["1", "4", "K"] },
+            { name: "서울역", lat: 37.5546, lng: 126.9707, lines: ["1", "4", "K", "A"] },
             { name: "숙대입구", lat: 37.5448, lng: 126.9724, lines: ["4"] },
             { name: "삼각지", lat: 37.5348, lng: 126.9736, lines: ["4", "6"] },
             { name: "신용산", lat: 37.5287, lng: 126.9725, lines: ["4"] },
@@ -185,7 +249,7 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "인덕원", lat: 37.3948, lng: 127.0366, lines: ["4"] },
             { name: "평촌", lat: 37.3896, lng: 127.0458, lines: ["4"] },
             { name: "범계", lat: 37.3901, lng: 127.0542, lines: ["4"] },
-            { name: "금정", lat: 37.3720, lng: 127.0600, lines: ["4", "1"] },
+            { name: "금정", lat: 37.3720, lng: 127.0600, lines: ["4"] },
             { name: "산본", lat: 37.3597, lng: 127.0714, lines: ["4"] },
             { name: "수리산", lat: 37.3544, lng: 127.0752, lines: ["4"] },
             { name: "대야미", lat: 37.3445, lng: 127.0790, lines: ["4"] },
@@ -196,10 +260,12 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "고잔", lat: 37.3157, lng: 126.9995, lines: ["4"] },
             { name: "초지", lat: 37.3078, lng: 126.7934, lines: ["4"] },
             { name: "안산", lat: 37.3232, lng: 126.7916, lines: ["4"] },
+            { name: "신길온천", lat: 37.3420, lng: 126.7328, lines: ["4"] },
+            { name: "정왕", lat: 37.3481, lng: 126.7155, lines: ["4"] },
             { name: "오이도", lat: 37.3455, lng: 126.6868, lines: ["4"] },
         ],
     },
-    // Line 5 (Purple)
+    // ===== LINE 5 (Purple) =====
     {
         id: "5",
         name: "5호선",
@@ -213,14 +279,14 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "발산", lat: 37.5578, lng: 126.8418, lines: ["5"] },
             { name: "우장산", lat: 37.5485, lng: 126.8364, lines: ["5"] },
             { name: "화곡", lat: 37.5416, lng: 126.8396, lines: ["5"] },
-            { name: "까치산", lat: 37.5315, lng: 126.8471, lines: ["5", "2"] },
+            { name: "까치산", lat: 37.5315, lng: 126.8471, lines: ["2", "5"] },
             { name: "신정", lat: 37.5246, lng: 126.8561, lines: ["5"] },
             { name: "목동", lat: 37.5263, lng: 126.8660, lines: ["5"] },
             { name: "오목교", lat: 37.5249, lng: 126.8769, lines: ["5"] },
             { name: "양평", lat: 37.5253, lng: 126.8867, lines: ["5"] },
             { name: "영등포구청", lat: 37.5226, lng: 126.9055, lines: ["2", "5"] },
             { name: "영등포시장", lat: 37.5223, lng: 126.9130, lines: ["5"] },
-            { name: "신길", lat: 37.5175, lng: 126.9174, lines: ["5", "1"] },
+            { name: "신길", lat: 37.5175, lng: 126.9174, lines: ["1", "5"] },
             { name: "여의도", lat: 37.5216, lng: 126.9243, lines: ["5", "9"] },
             { name: "여의나루", lat: 37.5270, lng: 126.9329, lines: ["5"] },
             { name: "마포", lat: 37.5399, lng: 126.9462, lines: ["5"] },
@@ -244,6 +310,14 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "광나루", lat: 37.5454, lng: 127.1043, lines: ["5"] },
             { name: "천호", lat: 37.5381, lng: 127.1237, lines: ["5", "8"] },
             { name: "강동", lat: 37.5353, lng: 127.1328, lines: ["5"] },
+            { name: "둔촌동", lat: 37.5273, lng: 127.1360, lines: ["5"] },
+            { name: "올림픽공원", lat: 37.5175, lng: 127.1313, lines: ["5", "9"] },
+            { name: "방이", lat: 37.5088, lng: 127.1266, lines: ["5"] },
+            { name: "오금", lat: 37.5023, lng: 127.1285, lines: ["3", "5"] },
+            { name: "개롱", lat: 37.4934, lng: 127.1322, lines: ["5"] },
+            { name: "거여", lat: 37.4917, lng: 127.1445, lines: ["5"] },
+            { name: "마천", lat: 37.4940, lng: 127.1516, lines: ["5"] },
+            // 상일동 지선
             { name: "길동", lat: 37.5352, lng: 127.1422, lines: ["5"] },
             { name: "굽은다리", lat: 37.5355, lng: 127.1541, lines: ["5"] },
             { name: "명일", lat: 37.5273, lng: 127.1544, lines: ["5"] },
@@ -256,7 +330,7 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "하남검단산", lat: 37.5253, lng: 127.2267, lines: ["5"] },
         ],
     },
-    // Line 6 (Brown/Orange)
+    // ===== LINE 6 (Brown) =====
     {
         id: "6",
         name: "6호선",
@@ -288,7 +362,7 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "약수", lat: 37.5544, lng: 127.0107, lines: ["3", "6"] },
             { name: "청구", lat: 37.5597, lng: 127.0213, lines: ["5", "6"] },
             { name: "신당", lat: 37.5659, lng: 127.0177, lines: ["2", "6"] },
-            { name: "동묘앞", lat: 37.5728, lng: 127.0157, lines: ["6", "1"] },
+            { name: "동묘앞", lat: 37.5728, lng: 127.0157, lines: ["1", "6"] },
             { name: "창신", lat: 37.5792, lng: 127.0166, lines: ["6"] },
             { name: "보문", lat: 37.5875, lng: 127.0197, lines: ["6"] },
             { name: "안암", lat: 37.5859, lng: 127.0295, lines: ["6"] },
@@ -300,17 +374,17 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "태릉입구", lat: 37.6174, lng: 127.0768, lines: ["6", "7"] },
             { name: "화랑대", lat: 37.6198, lng: 127.0848, lines: ["6"] },
             { name: "봉화산", lat: 37.6174, lng: 127.0936, lines: ["6"] },
-            { name: "신내", lat: 37.6121, lng: 127.1035, lines: ["6"] },
+            { name: "신내", lat: 37.6121, lng: 127.1035, lines: ["6", "K"] },
         ],
     },
-    // Line 7 (Olive/Dark Yellow)
+    // ===== LINE 7 (Olive) =====
     {
         id: "7",
         name: "7호선",
         color: "#747F00",
         stations: [
             { name: "장암", lat: 37.7201, lng: 127.0570, lines: ["7"] },
-            { name: "도봉산", lat: 37.6922, lng: 127.0446, lines: ["7", "1"] },
+            { name: "도봉산", lat: 37.6897, lng: 127.0447, lines: ["1", "7"] },
             { name: "수락산", lat: 37.6795, lng: 127.0550, lines: ["7"] },
             { name: "마들", lat: 37.6684, lng: 127.0531, lines: ["7"] },
             { name: "노원", lat: 37.6554, lng: 127.0617, lines: ["4", "7"] },
@@ -332,7 +406,7 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "청담", lat: 37.5190, lng: 127.0520, lines: ["7"] },
             { name: "강남구청", lat: 37.5173, lng: 127.0412, lines: ["7", "K"] },
             { name: "학동", lat: 37.5140, lng: 127.0319, lines: ["7"] },
-            { name: "논현", lat: 37.5106, lng: 127.0223, lines: ["7"] },
+            { name: "논현", lat: 37.5106, lng: 127.0223, lines: ["7", "신분당"] },
             { name: "반포", lat: 37.5078, lng: 127.0111, lines: ["7"] },
             { name: "고속터미널", lat: 37.5049, lng: 127.0047, lines: ["3", "7", "9"] },
             { name: "내방", lat: 37.4889, lng: 126.9972, lines: ["7"] },
@@ -350,10 +424,22 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "철산", lat: 37.4772, lng: 126.8659, lines: ["7"] },
             { name: "광명사거리", lat: 37.4727, lng: 126.8549, lines: ["7"] },
             { name: "천왕", lat: 37.4830, lng: 126.8356, lines: ["7"] },
-            { name: "온수", lat: 37.4924, lng: 126.8239, lines: ["7", "1"] },
+            { name: "온수", lat: 37.4924, lng: 126.8239, lines: ["1", "7"] },
+            // 청라 연장
+            { name: "까치울", lat: 37.5089, lng: 126.8050, lines: ["7"] },
+            { name: "부천종합운동장", lat: 37.5138, lng: 126.7936, lines: ["7"] },
+            { name: "춘의", lat: 37.5147, lng: 126.7839, lines: ["7"] },
+            { name: "신중동", lat: 37.5094, lng: 126.7739, lines: ["7"] },
+            { name: "부천시청", lat: 37.5027, lng: 126.7629, lines: ["7"] },
+            { name: "상동", lat: 37.4989, lng: 126.7527, lines: ["7"] },
+            { name: "삼산체육관", lat: 37.4944, lng: 126.7420, lines: ["7"] },
+            { name: "굴포천", lat: 37.4961, lng: 126.7247, lines: ["7"] },
+            { name: "부평구청", lat: 37.5064, lng: 126.7218, lines: ["7"] },
+            { name: "산곡", lat: 37.5191, lng: 126.7211, lines: ["7"] },
+            { name: "석남", lat: 37.5286, lng: 126.7207, lines: ["7"] },
         ],
     },
-    // Line 8 (Pink)
+    // ===== LINE 8 (Pink) =====
     {
         id: "8",
         name: "8호선",
@@ -378,7 +464,7 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "모란", lat: 37.4310, lng: 127.1290, lines: ["8", "K"] },
         ],
     },
-    // Line 9 (Gold)
+    // ===== LINE 9 (Gold) =====
     {
         id: "9",
         name: "9호선",
@@ -408,7 +494,7 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "신반포", lat: 37.5066, lng: 127.0003, lines: ["9"] },
             { name: "고속터미널", lat: 37.5049, lng: 127.0047, lines: ["3", "7", "9"] },
             { name: "사평", lat: 37.5033, lng: 127.0165, lines: ["9"] },
-            { name: "신논현", lat: 37.5047, lng: 127.0251, lines: ["9"] },
+            { name: "신논현", lat: 37.5047, lng: 127.0251, lines: ["9", "신분당"] },
             { name: "언주", lat: 37.5075, lng: 127.0344, lines: ["9"] },
             { name: "선정릉", lat: 37.5103, lng: 127.0430, lines: ["9", "K"] },
             { name: "삼성중앙", lat: 37.5114, lng: 127.0511, lines: ["9"] },
@@ -419,12 +505,12 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "석촌", lat: 37.5055, lng: 127.1067, lines: ["8", "9"] },
             { name: "송파나루", lat: 37.5110, lng: 127.1182, lines: ["9"] },
             { name: "한성백제", lat: 37.5178, lng: 127.1249, lines: ["9"] },
-            { name: "올림픽공원", lat: 37.5175, lng: 127.1313, lines: ["9", "5"] },
+            { name: "올림픽공원", lat: 37.5175, lng: 127.1313, lines: ["5", "9"] },
             { name: "둔촌오륜", lat: 37.5189, lng: 127.1407, lines: ["9"] },
             { name: "중앙보훈병원", lat: 37.5159, lng: 127.1489, lines: ["9"] },
         ],
     },
-    // Shinbundang Line (Red)
+    // ===== SHINBUNDANG LINE (Red) =====
     {
         id: "신분당",
         name: "신분당선",
@@ -455,11 +541,10 @@ export const getAllStations = (): Station[] => {
     const stationMap = new Map<string, Station>();
     SUBWAY_LINES.forEach((line) => {
         line.stations.forEach((station) => {
-            const key = `${station.lat}-${station.lng}`;
+            const key = `${station.lat.toFixed(4)}-${station.lng.toFixed(4)}`;
             if (!stationMap.has(key)) {
-                stationMap.set(key, station);
+                stationMap.set(key, { ...station });
             } else {
-                // Merge lines
                 const existing = stationMap.get(key)!;
                 existing.lines = [...new Set([...existing.lines, ...station.lines])];
             }
