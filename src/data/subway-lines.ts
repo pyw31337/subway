@@ -16,13 +16,12 @@ export interface SubwayLine {
 }
 
 export const SUBWAY_LINES: SubwayLine[] = [
-    // ===== LINE 1 (Dark Blue) =====
+    // ===== LINE 1 Main (Dark Blue) 소요산-신도림-구로 =====
     {
         id: "1",
         name: "1호선",
         color: "#0052A4",
         stations: [
-            // 소요산 방면
             { name: "소요산", lat: 37.9474, lng: 127.0617, lines: ["1"] },
             { name: "동두천", lat: 37.9034, lng: 127.0609, lines: ["1"] },
             { name: "보산", lat: 37.8954, lng: 127.0618, lines: ["1"] },
@@ -64,7 +63,15 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "신길", lat: 37.5175, lng: 126.9174, lines: ["1", "5"] },
             { name: "영등포", lat: 37.5156, lng: 126.9077, lines: ["1"] },
             { name: "신도림", lat: 37.5088, lng: 126.8913, lines: ["1", "2"] },
-            // 인천 방면
+            { name: "구로", lat: 37.5035, lng: 126.8824, lines: ["1"] },
+        ],
+    },
+    // ===== LINE 1 인천 방면 (구로-인천) =====
+    {
+        id: "1-인천",
+        name: "1호선 인천",
+        color: "#0052A4",
+        stations: [
             { name: "구로", lat: 37.5035, lng: 126.8824, lines: ["1"] },
             { name: "구일", lat: 37.4936, lng: 126.8545, lines: ["1"] },
             { name: "개봉", lat: 37.4933, lng: 126.8457, lines: ["1"] },
@@ -85,14 +92,27 @@ export const SUBWAY_LINES: SubwayLine[] = [
             { name: "제물포", lat: 37.4614, lng: 126.6517, lines: ["1"] },
             { name: "도원", lat: 37.4588, lng: 126.6417, lines: ["1"] },
             { name: "동인천", lat: 37.4731, lng: 126.6351, lines: ["1"] },
-            { name: "인천", lat: 37.4562, lng: 126.7315, lines: ["1"] },
-            // 광명, 서동탄 방면
+            { name: "인천", lat: 37.4764, lng: 126.6173, lines: ["1"] },
+        ],
+    },
+    // ===== LINE 1 광명/서동탄 방면 (구로-광명) =====
+    {
+        id: "1-광명",
+        name: "1호선 광명",
+        color: "#0052A4",
+        stations: [
+            { name: "구로", lat: 37.5035, lng: 126.8824, lines: ["1"] },
             { name: "가산디지털단지", lat: 37.4816, lng: 126.8826, lines: ["1", "7"] },
             { name: "독산", lat: 37.4713, lng: 126.8953, lines: ["1"] },
             { name: "금천구청", lat: 37.4568, lng: 126.8956, lines: ["1"] },
-            { name: "광명", lat: 37.4154, lng: 126.8847, lines: ["1"] },
+            { name: "석수", lat: 37.4388, lng: 126.9083, lines: ["1"] },
+            { name: "관악", lat: 37.4264, lng: 126.9184, lines: ["1"] },
+            { name: "안양", lat: 37.4019, lng: 126.9225, lines: ["1"] },
+            { name: "명학", lat: 37.3932, lng: 126.9247, lines: ["1"] },
+            { name: "금정", lat: 37.3720, lng: 127.0600, lines: ["1", "4"] },
         ],
     },
+
     // ===== LINE 2 (Green - Loop + Branches) =====
     {
         id: "2",
