@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo } from "react";
 
 declare global {
     interface Window {
@@ -7,7 +7,7 @@ declare global {
     }
 }
 
-export default function MapBackground() {
+function MapBackground() {
     const mapContainer = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -51,3 +51,6 @@ export default function MapBackground() {
         />
     );
 }
+
+// Memoize to prevent unnecessary re-renders
+export default memo(MapBackground);

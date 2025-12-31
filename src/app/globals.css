@@ -29,17 +29,16 @@ body {
 /* Sometimes blob urls */
 .custom-map-style img[src*=".png"]:not([src*="subway"]):not([src*="overlay"]) {
     /* 
-       White Background Style (Standard Grayscale):
-       1. Grayscale: Remove color from base map.
-       2. Contrast/Brightness: Slight boost to ensure background is clean White and text is sharp Black.
-       3. NO INVERT: Inversion caused the "Black Background" issue.
+       Performance Optimized:
+       - Removed brightness() and contrast() to reduce GPU load
+       - Only grayscale remains which is less expensive
     */
-    filter: grayscale(100%) contrast(110%) brightness(105%);
+    filter: grayscale(90%);
     opacity: 1;
 
     /* Performance Optimization: Force GPU Acceleration */
     transform: translateZ(0);
-    will-change: filter;
+    will-change: transform;
     backface-visibility: hidden;
 }
 
