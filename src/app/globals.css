@@ -29,13 +29,12 @@ body {
 /* Sometimes blob urls */
 .custom-map-style img[src*=".png"]:not([src*="subway"]):not([src*="overlay"]) {
     /* 
-       Aggressive Line Art (White Background):
-       1. Invert: Dark background, light roads.
-       2. Grayscale: Monotone.
-       3. BRIGHTNESS (300%): Force the Dark Gray background to blow out to WHITE.
-       4. CONTRAST (200%): Keep the Black lines Black.
+       White Background Style (Standard Grayscale):
+       1. Grayscale: Remove color from base map.
+       2. Contrast/Brightness: Slight boost to ensure background is clean White and text is sharp Black.
+       3. NO INVERT: Inversion caused the "Black Background" issue.
     */
-    filter: invert(100%) grayscale(100%) brightness(300%) contrast(200%);
+    filter: grayscale(100%) contrast(110%) brightness(105%);
     opacity: 1;
 }
 
