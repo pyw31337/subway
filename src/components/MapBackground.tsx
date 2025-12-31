@@ -89,27 +89,29 @@ function MapBackground() {
                         <CircleMarker
                             key={`${station.name}-${idx}`}
                             center={[station.lat, station.lng]}
-                            radius={isTransfer ? 6 : 4}
+                            radius={isTransfer ? 7 : 5}
                             pathOptions={{
-                                color: isTransfer ? "#333" : color,
-                                fillColor: isTransfer ? "#fff" : color,
+                                color: color, // Border follows line color
+                                fillColor: "#fff", // White fill
                                 fillOpacity: 1,
-                                weight: isTransfer ? 2 : 1.5,
+                                weight: isTransfer ? 3.5 : 3, // Thicker border
                             }}
                         >
                             <Tooltip
                                 direction="top"
-                                offset={[0, -5]}
-                                className="station-tooltip"
+                                offset={[0, -8]}
+                                permanent={true}
+                                className="station-label"
                             >
-                                <div className="font-bold text-xs">
+                                <span style={{
+                                    fontWeight: 600,
+                                    fontSize: '10px',
+                                    color: '#333',
+                                    textShadow: '0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff',
+                                    whiteSpace: 'nowrap',
+                                }}>
                                     {station.name}
-                                    {isTransfer && (
-                                        <span className="text-gray-500 ml-1">
-                                            ({station.lines.join("·")})
-                                        </span>
-                                    )}
-                                </div>
+                                </span>
                             </Tooltip>
                         </CircleMarker>
                     );
