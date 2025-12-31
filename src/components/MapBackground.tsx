@@ -24,6 +24,10 @@ export default function MapBackground() {
                     };
                     const map = new window.kakao.maps.Map(mapContainer.current, options);
 
+                    // Explicitly enable zoom and drag just in case
+                    map.setZoomable(true);
+                    map.setDraggable(true);
+
                     // Add Subway Overlay
                     map.addOverlayMapTypeId(window.kakao.maps.MapTypeId.SUBWAY);
 

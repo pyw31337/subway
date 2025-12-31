@@ -29,14 +29,12 @@ body {
 /* Sometimes blob urls */
 .custom-map-style img[src*=".png"]:not([src*="subway"]):not([src*="overlay"]) {
     /* 
-       Line Art Style (Dark Lines, White Background, No Text):
-       1. Invert: Light roads -> Dark lines. Black Text -> White Text.
-       2. Grayscale: Remove color.
-       3. Brightness/Contrast: Wash out background to white, merging "White Text" into it.
+       Dark Mode Style (Inverted):
+       1. Invert: Light map -> Dark map.
+       2. Grayscale: Monotone.
     */
-    filter: invert(100%) grayscale(100%) brightness(120%) contrast(120%);
+    filter: invert(100%) grayscale(100%);
     opacity: 1;
-    /* Reset opacity */
 }
 
 /* Specifically Ensure Subway Overlay is untouched or customized */
