@@ -13,42 +13,15 @@ body {
     font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Custom Map Styling */
-.custom-map-style div[style*="background-image"] {
-    /* Sometimes background tiles are divs? Try targeting images first */
-}
-
 /* 
-   Target Kakao Map Tiles.
-   Base tiles usually come from map.daumcdn.net/map_2d/ 
-   or similarly structued URLs. 
-   We want: HIGH CONTRAST, BRIGHT (white background), GRAYSCALE
+   PERFORMANCE MODE: All CSS filters REMOVED
+   CSS filters on hundreds of map tiles cause severe lag during dragging.
+   Using default map style with Subway overlay for best performance.
 */
-.custom-map-style img[src*="map_2d"],
-.custom-map-style img[src*="blob"],
-/* Sometimes blob urls */
-.custom-map-style img[src*=".png"]:not([src*="subway"]):not([src*="overlay"]) {
-    /* 
-       Performance Optimized:
-       - Removed brightness() and contrast() to reduce GPU load
-       - Only grayscale remains which is less expensive
-    */
-    filter: grayscale(90%);
-    opacity: 1;
 
-    /* Performance Optimization: Force GPU Acceleration */
+/* GPU acceleration for smooth dragging - NO FILTERS */
+.custom-map-style {
     transform: translateZ(0);
     will-change: transform;
     backface-visibility: hidden;
 }
-
-/* Specifically Ensure Subway Overlay is untouched or customized */
-.custom-map-style img[src*="subway"] {
-    filter: none !important;
-}
-
-/* 
-   Fallback: If structure is obscure, we might simply apply to ALL images
-   and exclude known markers/overlays if possible. 
-   Risk: "subway" in src is a guess.
-*/
