@@ -36,6 +36,11 @@ body {
     */
     filter: grayscale(100%) contrast(110%) brightness(105%);
     opacity: 1;
+
+    /* Performance Optimization: Force GPU Acceleration */
+    transform: translateZ(0);
+    will-change: filter;
+    backface-visibility: hidden;
 }
 
 /* Specifically Ensure Subway Overlay is untouched or customized */
