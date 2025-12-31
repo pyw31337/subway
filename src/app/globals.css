@@ -29,11 +29,12 @@ body {
 /* Sometimes blob urls */
 .custom-map-style img[src*=".png"]:not([src*="subway"]):not([src*="overlay"]) {
     /* 
-       Dark Mode Style (Inverted):
+       Line Art Style (Dark Lines, White Background):
        1. Invert: Light map -> Dark map.
        2. Grayscale: Monotone.
+       3. Brightness/Contrast: Wash out the dark background to White.
     */
-    filter: invert(100%) grayscale(100%);
+    filter: invert(100%) grayscale(100%) brightness(120%) contrast(120%);
     opacity: 1;
 }
 
