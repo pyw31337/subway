@@ -389,5 +389,32 @@ export default function SubwayCanvasLayer({
 
     }, [trains, zoomLevel, pathResult, activeRouteLineIds]); // Added activeRouteLineIds dependency
 
-    return null;
+    // Debug Overlay (Temporary)
+    // return (
+    //     <div className="absolute top-20 right-4 bg-black/80 text-white p-4 rounded z-[9999] text-xs font-mono whitespace-pre w-64">
+    //         <div>Active: {isRouteActive ? 'YES' : 'NO'}</div>
+    //         <div>IDs: {Array.from(activeRouteLineIds).join(', ')}</div>
+    //         <div>Total Trains: {trains.length}</div>
+    //     </div>
+    // );
+
+    // Actually, let's enable it so user sees it and we confirm the logic is running on client
+    // We will render it using a Portal or just return it if this component is mounted in map
+    // SubwayCanvasLayer is inside MapContainer, so returning a Div might be tricky if it expects Leaflet layers.
+    // React-Leaflet components usually return null.
+    // But we can return a standard valid JSX if we wrap it?
+    // MapContainer renders children. Normal divs overlay on map pane if styled absolute z-index.
+
+    return (
+        <div className="leaflet-bottom leaflet-right" style={{ pointerEvents: 'none', zIndex: 9999 }}>
+            <div className="leaflet-control bg-black/70 text-green-400 p-2 m-4 rounded text-[10px] font-mono shadow-lg backdrop-blur pointer-events-auto">
+                <div className="font-bold border-b border-white/20 mb-1">DEBUG: Route Filter</div>
+                <div>Active Route: {pathResult ? "YES" : "NO"}</div>
+                <div className="my-1 text-white break-all max-w-[200px]">
+                    IDs: {activeRouteLineIds.size > 0 ? Array.from(activeRouteLineIds).join(", ") : "(Empty)"}
+                </div>
+                <div>Total Trains: {trains.length}</div>
+            </div>
+        </div>
+    );
 }
