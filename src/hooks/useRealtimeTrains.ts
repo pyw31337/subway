@@ -23,31 +23,37 @@ export function useRealtimeTrains() {
     const [trains, setTrains] = useState<Train[]>([]);
 
     useEffect(() => {
-        // Init mock trains: 2 trains per line for demo
+        // Init mock trains: High density (e.g., 1 train every 4-5 stations) per direction
         const initialTrains: any[] = [];
+        const STATION_GAP = 5; // Place a train every 5 stations
 
         SUBWAY_LINES.forEach(line => {
-            if (line.stations.length < 2) return;
+            const stationCount = line.stations.length;
+            if (stationCount < 2) return;
 
-            // Train 1: Early in the line
-            initialTrains.push({
-                id: `t-${line.id}-1`,
-                lineId: line.id,
-                lineName: line.name,
-                stationIndex: 0,
-                progress: 0, // 0 to 1 between stations
-                direction: 1 // 1: forward, -1: backward (simplified)
-            });
+            // Forward direction (0 -> End)
+            for (let i = 0; i < stationCount; i += STATION_GAP) {
+                initialTrains.push({
+                    id: `t-${line.id}-fwd-${i}`,
+                    lineId: line.id,
+                    lineName: line.name,
+                    stationIndex: i,
+                    progress: Math.random(), // Add randomness so they don't move in total sync
+                    direction: 1
+                });
+            }
 
-            // Train 2: Middle of the line
-            initialTrains.push({
-                id: `t-${line.id}-2`,
-                lineId: line.id,
-                lineName: line.name,
-                stationIndex: Math.floor(line.stations.length / 2),
-                progress: 0,
-                direction: -1
-            });
+            // Backward direction (End -> 0)
+            for (let i = stationCount - 1; i >= 0; i -= STATION_GAP) {
+                initialTrains.push({
+                    id: `t-${line.id}-bwd-${i}`,
+                    lineId: line.id,
+                    lineName: line.name,
+                    stationIndex: i,
+                    progress: Math.random(),
+                    direction: -1
+                });
+            }
         });
 
         const activeTrains = initialTrains;
