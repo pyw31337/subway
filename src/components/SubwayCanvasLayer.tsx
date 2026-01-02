@@ -61,20 +61,25 @@ export default function SubwayCanvasLayer({
         }
 
         const ids = new Set<string>();
-        // Simple heuristic: If a station on the path belongs to a line, that line is "relevant"?
-        // Or strictly strictly only lines used in the path segments?
-        // Since we don't have explicit edge->line mapping in result, let's include all lines touching the path stations.
-        // This is safe enough (e.g. at transfer stations, both lines are "active" effectively).
-        // A tighter filter would require path finding to return line IDs. For now this is good optimization.
-        pathResult.path.forEach(sName => {
-            const s = stations.find(st => st.name === sName);
-            if (s) {
-                s.lines.forEach(lName => {
+
+        // Iterate segments to find the connecting line
+        for (let i = 0; i < pathResult.path.length - 1; i++) {
+            const s1Name = pathResult.path[i];
+            const s2Name = pathResult.path[i + 1];
+
+            const s1 = stations.find(s => s.name === s1Name);
+            const s2 = stations.find(s => s.name === s2Name);
+
+            if (s1 && s2) {
+                // Find common line(s)
+                const commonLines = s1.lines.filter(l => s2.lines.includes(l));
+
+                commonLines.forEach(lName => {
                     const lineConfig = SUBWAY_LINES.find(l => l.name === lName);
                     if (lineConfig) ids.add(lineConfig.id);
                 });
             }
-        });
+        }
         activeRouteLineIds.current = ids;
     }, [pathResult, stations]);
 
@@ -170,32 +175,38 @@ export default function SubwayCanvasLayer({
 
         const myRenderer = L.canvas({ padding: 0.5 });
 
-        // Draw Path Line
-        if (pathResult) {
-            const pathCoords = pathResult.path.map((name) => {
-                const s = stations.find((st) => st.name === name);
-                return s ? [s.lat, s.lng] as [number, number] : null;
-            }).filter((c): c is [number, number] => c !== null);
+        // Draw Path Segments with Original Colors
+        if (pathResult && pathResult.path.length > 1) {
+            for (let i = 0; i < pathResult.path.length - 1; i++) {
+                const s1Name = pathResult.path[i];
+                const s2Name = pathResult.path[i + 1];
 
-            if (pathCoords.length > 0) {
-                // Determine color? User might want line colors preserved.
-                // Since path can span multiple lines, using a single highlight color (Neon) is safest/clearest.
-                // The user requested: "restore full colors... reset...".
-                // "exclude that section (of search)... rest gray".
-                // This implies the SEARCH section should be COLORED.
-                // But a multi-line path is hard to color segment-by-segment without edge data.
-                // For now, Neon Green/Blue is standard for "Active Route".
-                // Or we can try to find color of each segment?
-                // Let's stick to High Contrast Neon for the route itself as it's visibly distinct from gray.
+                const s1 = stations.find(s => s.name === s1Name);
+                const s2 = stations.find(s => s.name === s2Name);
 
-                layerGroup.addLayer(L.polyline(pathCoords, {
-                    color: "#00E0C6", // Bright turquoise
-                    weight: 8,
-                    opacity: 1,
-                    renderer: myRenderer,
-                    lineCap: "round",
-                    lineJoin: "round"
-                }));
+                if (s1 && s2) {
+                    // Identify the Line Color for this segment
+                    const commonLineNames = s1.lines.filter(l => s2.lines.includes(l));
+                    let segmentColor = "#00E0C6"; // Fallback
+
+                    if (commonLineNames.length > 0) {
+                        // Prefer the first common line
+                        const lineConfig = SUBWAY_LINES.find(l => l.name === commonLineNames[0]);
+                        if (lineConfig) segmentColor = lineConfig.color;
+                    } else {
+                        // Transfer Walk or Transfer Edge
+                        segmentColor = "#6b7280"; // Neutral gray for transfers
+                    }
+
+                    layerGroup.addLayer(L.polyline([[s1.lat, s1.lng], [s2.lat, s2.lng]], {
+                        color: segmentColor,
+                        weight: 8,
+                        opacity: 1,
+                        renderer: myRenderer,
+                        lineCap: "round",
+                        lineJoin: "round"
+                    }));
+                }
             }
         }
 
