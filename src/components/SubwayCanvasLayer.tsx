@@ -201,60 +201,22 @@ export default function SubwayCanvasLayer({
 
                 if (!marker) {
                     // Create New Marker
-                    // Visual: Use provided PNG icon
+                    // Visual: SVG Icon for better consistency and styling
                     const line = SUBWAY_LINES.find(l => l.id === train.lineId);
                     const color = line?.color || "#000";
 
-                    // Determine Rotation and Flip
-                    // Math Angle: 0 = East, 90 = North (Screen coords: 0=Right, -90=Up)
-                    // CSS Rotate: Positive = CW.
-                    // If angle is 0 -> Rotate 0.
-                    // If angle is 45 -> Rotate -45.
-                    // If angle is 180 (Left) -> Flip X, Rotate 0.
-                    // Logic:
-                    // If abs(angle) > 90: Flip X, Rotate (angle - 180)
-                    // Else: Rotate (-angle)
-
-                    const deg = train.angle;
-                    const isLeft = Math.abs(deg) > 90;
-                    const rotateDeg = isLeft ? (deg - 180) : -deg;
-                    const transform = isLeft
-                        ? `scaleX(-1) rotate(${rotateDeg}deg)`
-                        : `rotate(${rotateDeg}deg)`;
-
-                    const iconHtml = `
-                        <div class="train-marker" style="transform: ${transform}; transition: transform 0.3s ease-out;">
-                            <div style="
-                                width: 28px; 
-                                height: 28px; 
-                                background-color: ${color};
-                                -webkit-mask-image: url(/subway/train-icon.png);
-                                -webkit-mask-size: contain;
-                                -webkit-mask-repeat: no-repeat;
-                                -webkit-mask-position: center;
-                                mask-image: url(/subway/train-icon.png);
-                                mask-size: contain;
-                                mask-repeat: no-repeat;
-                                mask-position: center;
-                                /* Stack drop-shadows to simulate a solid 2px border (Stroke effect) */
-                                filter: 
-                                    drop-shadow(1px 0 0 white) 
-                                    drop-shadow(-1px 0 0 white) 
-                                    drop-shadow(0 1px 0 white) 
-                                    drop-shadow(0 -1px 0 white)
-                                    drop-shadow(1px 0 0 white) 
-                                    drop-shadow(-1px 0 0 white) 
-                                    drop-shadow(0 1px 0 white) 
-                                    drop-shadow(0 -1px 0 white);
-                            "></div>
-                        </div>
+                    // Simple Train SVG
+                    const svgIcon = `
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 6V17H20V6C20 6 20 4 12 4C4 4 4 6 4 6ZM4 17V19H20V17M6 10H9V13H6V10ZM15 10H18V13H15V10ZM6 19L5 21H7L8 19H16L17 21H19L18 19" fill="${color}" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+                        </svg>
                     `;
 
                     const icon = L.divIcon({
                         className: 'train-marker-container',
-                        html: iconHtml,
-                        iconSize: [28, 28],
-                        iconAnchor: [14, 14] // Center anchor
+                        html: `<div class="train-marker">${svgIcon}</div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
                     });
 
                     marker = L.marker([train.lat, train.lng], {
@@ -265,7 +227,7 @@ export default function SubwayCanvasLayer({
                     // Add tooltip
                     marker.bindTooltip(`${train.lineName} (${train.headingTo})`, {
                         direction: 'top',
-                        offset: [0, -14],
+                        offset: [0, -10],
                         className: 'train-label',
                         permanent: false
                     });
@@ -273,20 +235,10 @@ export default function SubwayCanvasLayer({
                     marker.addTo(layerGroup);
                     currentMarkers.set(train.id, marker);
                 } else {
-                    // Update Position & Rotation
+                    // Update Position
+                    // Leaflet handles smooth transition if CSS transition is set on the element?
+                    // Or just setLatLng is enough.
                     marker.setLatLng([train.lat, train.lng]);
-
-                    // Update Rotation in DOM
-                    const iconEl = marker.getElement()?.querySelector('.train-marker') as HTMLElement;
-                    if (iconEl) {
-                        const deg = train.angle;
-                        const isLeft = Math.abs(deg) > 90;
-                        const rotateDeg = isLeft ? (deg - 180) : -deg;
-                        const transform = isLeft
-                            ? `scaleX(-1) rotate(${rotateDeg}deg)`
-                            : `rotate(${rotateDeg}deg)`;
-                        iconEl.style.transform = transform;
-                    }
 
                     // Update Tooltip content if needed (heading changes)
                     const tooltip = marker.getTooltip();
