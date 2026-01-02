@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useMap } from "react-leaflet";
-import L from "leaflet";
+import L from 'leaflet';
 import { SUBWAY_LINES, Station } from "@/data/subway-lines";
 import { Train } from "@/hooks/useRealtimeTrains";
 
@@ -28,83 +28,65 @@ export default function SubwayCanvasLayer({
     isDarkMode = false
 }: SubwayCanvasLayerProps) {
     const map = useMap();
-    const layerGroupRef = useRef<L.LayerGroup | null>(null);
 
-    // Initialize Canvas Renderer
+    // Separate LayerGroups for better performance
+    const staticLayerRef = useRef<L.LayerGroup | null>(null); // Lines & Stations
+    const dynamicLayerRef = useRef<L.LayerGroup | null>(null); // Trains
+    const highlightLayerRef = useRef<L.LayerGroup | null>(null); // Path Highlights
+
+    // Initialize Layers
     useEffect(() => {
-        // Create a canvas renderer
-        const myRenderer = L.canvas({ padding: 0.5 });
-        layerGroupRef.current = L.layerGroup().addTo(map);
+        const staticLayer = L.layerGroup().addTo(map);
+        const dynamicLayer = L.layerGroup().addTo(map);
+        const highlightLayer = L.layerGroup().addTo(map);
+
+        staticLayerRef.current = staticLayer;
+        dynamicLayerRef.current = dynamicLayer;
+        highlightLayerRef.current = highlightLayer;
 
         return () => {
-            if (layerGroupRef.current) {
-                layerGroupRef.current.remove();
-            }
+            staticLayer.remove();
+            dynamicLayer.remove();
+            highlightLayer.remove();
         };
     }, [map]);
 
-    // Redraw whenever relevant props change
+    // 1. Static Layer: Draw Lines & Stations
+    // Only redraw if ZOOM changes (for marker size) or Theme changes
+    // Assuming 'stations' prop remains stable reference ideally, or check length
     useEffect(() => {
-        if (!layerGroupRef.current) return;
-        const layerGroup = layerGroupRef.current;
-
-        // Clear existing layers
+        if (!staticLayerRef.current) return;
+        const layerGroup = staticLayerRef.current;
         layerGroup.clearLayers();
 
-        // 1. Draw Lines (Polylines)
-        // If pathResult exists, we dim regular lines.
+        // Canvas renderer for performance
+        const myRenderer = L.canvas({ padding: 0.5 });
+
+        // Draw Lines
         SUBWAY_LINES.forEach((line) => {
             const latlngs = line.stations.map(s => [s.lat, s.lng] as [number, number]);
 
-            const isDimmed = !!pathResult;
+            // Dim lines if path is active is handled by highlight layer overlay?
+            // Or we can just keep them opaque. Let's keep them somewhat consistent.
+            // Note: If we want to dim them dynamically without clearing everything, it's tricky.
+            // For OOM prevention, we prioritize NOT clearing this layer.
+            // We will handle dimming via CSS or just overlaying a semi-transparent 'fog' if needed, OR 
+            // accept that we don't dim the base lines for now to save memory.
+            // Let's keep them standard opacity.
+
             const polyline = L.polyline(latlngs, {
                 color: line.color,
                 weight: 4,
-                opacity: isDimmed ? 0.3 : 0.85,
+                opacity: 0.85,
                 lineCap: "round",
                 lineJoin: "round",
-                renderer: L.canvas({ padding: 0.5 }), // Use canvas renderer
+                renderer: myRenderer,
             });
 
             layerGroup.addLayer(polyline);
         });
 
-        // 2. Draw Path Highlight (if exists)
-        if (pathResult) {
-            const pathCoords = pathResult.path.map((name) => {
-                const s = stations.find((st) => st.name === name);
-                return s ? [s.lat, s.lng] as [number, number] : null;
-            }).filter((c): c is [number, number] => c !== null);
-
-            if (pathCoords.length > 0) {
-                // Black border
-                const highlightBorder = L.polyline(pathCoords, {
-                    color: "#000",
-                    weight: 8,
-                    opacity: 0.5,
-                    lineCap: "round",
-                    lineJoin: "round",
-                    renderer: L.canvas({ padding: 0.5 }),
-                });
-                layerGroup.addLayer(highlightBorder);
-
-                // Neon Line
-                const highlightLine = L.polyline(pathCoords, {
-                    color: "#00ffcc",
-                    weight: 5,
-                    opacity: 1,
-                    lineCap: "round",
-                    lineJoin: "round",
-                    renderer: L.canvas({ padding: 0.5 }),
-                });
-                layerGroup.addLayer(highlightLine);
-            }
-        }
-
-        // 3. Draw Stations (CircleMarkers)
-        // Optimization: Use a single loop
-
-        // Define styles based on zoom
+        // Draw Stations
         const isZoomOut = zoomLevel < 12;
         const zoomThreshold = 13;
 
@@ -113,102 +95,127 @@ export default function SubwayCanvasLayer({
             const color = primaryLine?.color || "#888";
             const isTransfer = station.lines.length > 1;
 
-            const isSelected = startStation === station.name || endStation === station.name;
-            const isInPath = pathResult?.path.includes(station.name);
-
-            // Style calculation
-            let radius = isZoomOut ? (isTransfer ? 5 : 3) : (isTransfer ? 7 : 5);
-            let weight = isZoomOut ? (isTransfer ? 2 : 1) : (isTransfer ? 3.5 : 3);
+            let radius = isZoomOut ? (isTransfer ? 4 : 2) : (isTransfer ? 6 : 4);
+            let weight = isZoomOut ? (isTransfer ? 2 : 1) : (isTransfer ? 3 : 2);
             let fillColor = "#fff";
-            let borderColor = color; // default
 
-            if (isSelected) {
-                radius = 10;
-                weight = 4;
-                borderColor = "#000";
-                fillColor = startStation === station.name ? "#3b82f6" : "#ef4444";
-            } else if (pathResult && !isInPath) {
-                // Dimmed
-                borderColor = "#ddd";
-            }
+            // We handle selection highlight in highlightLayer to avoid redrawing all stations
+            // Base station style:
 
             const marker = L.circleMarker([station.lat, station.lng], {
                 radius: radius,
-                color: borderColor,
+                color: color,
                 fillColor: fillColor,
                 fillOpacity: 1,
                 weight: weight,
-                renderer: L.canvas({ padding: 0.5 }),
+                renderer: myRenderer,
                 bubblingMouseEvents: false
             });
 
-            // Bind interactions
-            marker.on('click', () => {
-                onStationClick(station.name);
-            });
+            marker.on('click', () => onStationClick(station.name));
 
             // Tooltips
-
-            const showTooltip = zoomLevel >= zoomThreshold || isSelected;
-
-            if (showTooltip) {
+            if (zoomLevel >= zoomThreshold) {
                 marker.bindTooltip(station.name, {
                     permanent: true,
                     direction: "top",
                     offset: [0, -8],
-                    className: "station-label", // We can use CSS to hide if needed, but here we conditionally bind
+                    className: "station-label",
                 });
-            } else {
-                // If interactive (hover) tooltips are desired for zoomed out view:
-                // marker.bindTooltip(station.name); // Default is hover
             }
 
             layerGroup.addLayer(marker);
         });
 
-        // 4. Draw Trains
-        // Only draw trains if not zoomed out too much (optional performance tweak)
-        // And don't draw if path is active (to reduce noise?) -> Optional
-        if (zoomLevel >= 11) {
-            trains.forEach(train => {
-                const line = SUBWAY_LINES.find(l => l.id === train.lineId);
-                const color = line?.color || "#000";
+    }, [zoomLevel, stations]); // Re-runs on zoom, but NOT on 'trains' update!
 
-                // Train marker
-                const trainMarker = L.circleMarker([train.lat, train.lng], {
-                    radius: 6,
-                    color: "#fff",
-                    weight: 2,
-                    fillColor: color, // Line color for the train
-                    fillOpacity: 1,
-                    renderer: L.canvas({ padding: 0.5 }),
-                    bubblingMouseEvents: false
-                });
+    // 2. Highlight Layer: Selection & Path
+    useEffect(() => {
+        if (!highlightLayerRef.current) return;
+        const layerGroup = highlightLayerRef.current;
+        layerGroup.clearLayers();
 
-                // Tooltip for train
-                // Show destination info
-                if (zoomLevel >= 13) {
-                    trainMarker.bindTooltip(`${train.lineName} (${train.headingTo}행)`, {
-                        direction: 'top',
-                        offset: [0, -6],
-                        className: 'train-label'
-                    });
-                }
+        if (!startStation && !endStation && !pathResult) return;
 
-                layerGroup.addLayer(trainMarker);
-            });
+        const myRenderer = L.canvas({ padding: 0.5 });
+
+        // Draw Path Line
+        if (pathResult) {
+            const pathCoords = pathResult.path.map((name) => {
+                const s = stations.find((st) => st.name === name);
+                return s ? [s.lat, s.lng] as [number, number] : null;
+            }).filter((c): c is [number, number] => c !== null);
+
+            if (pathCoords.length > 0) {
+                // Neon Glow
+                layerGroup.addLayer(L.polyline(pathCoords, {
+                    color: "#00ffcc",
+                    weight: 6,
+                    opacity: 1,
+                    renderer: myRenderer
+                }));
+            }
         }
 
-    }, [
-        map,
-        stations,
-        zoomLevel,
-        startStation,
-        endStation,
-        pathResult,
-        onStationClick,
-        trains
-    ]);
+        // Draw Selected Stations (Overlays)
+        const drawHighlightMarker = (name: string, type: 'start' | 'end' | 'path') => {
+            const s = stations.find(st => st.name === name);
+            if (!s) return;
+
+            const color = type === 'start' ? "#3b82f6" : (type === 'end' ? "#ef4444" : "#00ffcc");
+            const radius = type === 'path' ? 5 : 8;
+
+            layerGroup.addLayer(L.circleMarker([s.lat, s.lng], {
+                radius: radius,
+                color: "#000",
+                fillColor: color,
+                fillOpacity: 1,
+                weight: 2,
+                renderer: myRenderer
+            }));
+        };
+
+        if (startStation) drawHighlightMarker(startStation, 'start');
+        if (endStation) drawHighlightMarker(endStation, 'end');
+    }, [startStation, endStation, pathResult, stations]);
+
+
+    // 3. Dynamic Layer: Trains
+    useEffect(() => {
+        if (!dynamicLayerRef.current) return;
+        const layerGroup = dynamicLayerRef.current;
+        layerGroup.clearLayers();
+
+        if (zoomLevel < 11) return; // Opt-out for performance at low zoom
+
+        const myRenderer = L.canvas({ padding: 0.5 });
+
+        trains.forEach(train => {
+            const line = SUBWAY_LINES.find(l => l.id === train.lineId);
+            const color = line?.color || "#000";
+
+            const trainMarker = L.circleMarker([train.lat, train.lng], {
+                radius: 6,
+                color: "#fff",
+                weight: 2,
+                fillColor: color,
+                fillOpacity: 1,
+                renderer: myRenderer,
+                interactive: false
+            });
+
+            if (zoomLevel >= 13) {
+                trainMarker.bindTooltip(`${train.lineName} (${train.headingTo})`, {
+                    direction: 'top',
+                    offset: [0, -6],
+                    className: 'train-label',
+                    permanent: false // Hovers only for performance
+                });
+            }
+
+            layerGroup.addLayer(trainMarker);
+        });
+    }, [trains, zoomLevel]);
 
     return null;
 }
