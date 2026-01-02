@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useMap } from "react-leaflet";
 import L from 'leaflet';
 import { SUBWAY_LINES, Station } from "@/data/subway-lines";
@@ -51,13 +51,11 @@ export default function SubwayCanvasLayer({
         };
     }, [map]);
 
-    // 4. Helper: Determine active lines from path
-    const activeRouteLineIds = useRef<Set<string>>(new Set());
-
-    useEffect(() => {
-        if (!pathResult) {
-            activeRouteLineIds.current.clear();
-            return;
+    // 4. Helper: Determine active lines from path (Synchronous derivation)
+    // We use useMemo consistently to avoid race conditions with effects
+    const activeRouteLineIds = useMemo(() => {
+        if (!pathResult || !pathResult.path || pathResult.path.length < 2) {
+            return new Set<string>();
         }
 
         const ids = new Set<string>();
@@ -81,7 +79,7 @@ export default function SubwayCanvasLayer({
                 });
             }
         }
-        activeRouteLineIds.current = ids;
+        return ids;
     }, [pathResult, stations]);
 
     // 1. Static Layer: Draw Lines & Stations
@@ -314,8 +312,8 @@ export default function SubwayCanvasLayer({
                 // Optimization: Filter out trains if route active and train line is not relevant
                 if (isRouteActive) {
                     // Check if train.lineId is in activeRouteLineIds
-                    // Note: activeRouteLineIds is a ref, so correct current value is available
-                    if (!activeRouteLineIds.current.has(train.lineId)) {
+                    // Note: activeRouteLineIds is now a Set (memoized), not a ref
+                    if (!activeRouteLineIds.has(train.lineId)) {
                         // Skip this train (it's effectively "removed" from view)
                         return;
                     }
@@ -381,7 +379,7 @@ export default function SubwayCanvasLayer({
             let shouldRemove = false;
             if (!train) shouldRemove = true; // Train gone
             else if (zoomLevel < 11) shouldRemove = true; // Zoom out
-            else if (isRouteActive && train && !activeRouteLineIds.current.has(train.lineId)) shouldRemove = true; // Filtered out
+            else if (isRouteActive && train && !activeRouteLineIds.has(train.lineId)) shouldRemove = true; // Filtered out
 
             if (shouldRemove) {
                 marker.remove();
@@ -389,7 +387,7 @@ export default function SubwayCanvasLayer({
             }
         });
 
-    }, [trains, zoomLevel, pathResult]); // Added pathResult dependency
+    }, [trains, zoomLevel, pathResult, activeRouteLineIds]); // Added activeRouteLineIds dependency
 
     return null;
 }
