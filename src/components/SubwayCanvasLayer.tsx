@@ -236,7 +236,16 @@ export default function SubwayCanvasLayer({
                                 mask-size: contain;
                                 mask-repeat: no-repeat;
                                 mask-position: center;
-                                filter: drop-shadow(0 0 1px white) drop-shadow(0 0 1px white);
+                                /* Stack drop-shadows to simulate a solid 2px border (Stroke effect) */
+                                filter: 
+                                    drop-shadow(1px 0 0 white) 
+                                    drop-shadow(-1px 0 0 white) 
+                                    drop-shadow(0 1px 0 white) 
+                                    drop-shadow(0 -1px 0 white)
+                                    drop-shadow(1px 0 0 white) 
+                                    drop-shadow(-1px 0 0 white) 
+                                    drop-shadow(0 1px 0 white) 
+                                    drop-shadow(0 -1px 0 white);
                             "></div>
                         </div>
                     `;
