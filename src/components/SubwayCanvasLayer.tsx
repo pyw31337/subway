@@ -141,7 +141,6 @@ export default function SubwayCanvasLayer({
         const layerGroup = staticLayerRef.current;
         layerGroup.clearLayers();
 
-        const myRenderer = L.canvas({ padding: 0.5 });
         const isRouteActive = !!pathResult;
 
         // Draw Lines
@@ -164,7 +163,7 @@ export default function SubwayCanvasLayer({
                     // It's part of an active line (Broad Context) -> Dark Gray
                     drawColor = "#374151"; // Dark Gray (gray-700)
                     drawOpacity = 0.6;
-                    drawWeight = 3;
+                    drawWeight = 1.5;
                 } else {
                     // Completely irrelevant line -> Light Gray (Background)
                     drawColor = "#e5e7eb"; // Gray-200
@@ -179,7 +178,6 @@ export default function SubwayCanvasLayer({
                 opacity: drawOpacity,
                 lineCap: "round",
                 lineJoin: "round",
-                renderer: myRenderer,
             });
 
             layerGroup.addLayer(polyline);
@@ -215,7 +213,6 @@ export default function SubwayCanvasLayer({
                 fillColor: "#fff",
                 fillOpacity: isRouteActive ? 0.5 : 1,
                 weight: weight,
-                renderer: myRenderer,
                 bubblingMouseEvents: false
             });
 
@@ -242,8 +239,6 @@ export default function SubwayCanvasLayer({
         layerGroup.clearLayers();
 
         if (!startStation && !endStation && !pathResult) return;
-
-        const myRenderer = L.canvas({ padding: 0.5 });
 
         // Draw Path Segments with Original Colors
         if (pathResult && pathResult.path.length > 1) {
@@ -272,7 +267,7 @@ export default function SubwayCanvasLayer({
                         color: segmentColor,
                         weight: 8,
                         opacity: 1,
-                        renderer: myRenderer,
+                        // renderer: myRenderer,
                         lineCap: "round",
                         lineJoin: "round"
                     }));
@@ -318,7 +313,7 @@ export default function SubwayCanvasLayer({
                 fillColor: fillColor,
                 fillOpacity: 1,
                 weight: weight,
-                renderer: myRenderer
+                // renderer: myRenderer
             }));
 
             // 2. The Detailed Label
