@@ -52,16 +52,27 @@ export default function SubwayCanvasLayer({
     }, [map]);
 
     // 1. Static Layer: Draw Lines & Stations
+    // Only redraw if ZOOM changes (for marker size) or Theme changes
+    // Assuming 'stations' prop remains stable reference ideally, or check length
     useEffect(() => {
         if (!staticLayerRef.current) return;
         const layerGroup = staticLayerRef.current;
         layerGroup.clearLayers();
 
+        // Canvas renderer for performance
         const myRenderer = L.canvas({ padding: 0.5 });
 
-        // Draw Lines (Straight)
+        // Draw Lines
         SUBWAY_LINES.forEach((line) => {
             const latlngs = line.stations.map(s => [s.lat, s.lng] as [number, number]);
+
+            // Dim lines if path is active is handled by highlight layer overlay?
+            // Or we can just keep them opaque. Let's keep them somewhat consistent.
+            // Note: If we want to dim them dynamically without clearing everything, it's tricky.
+            // For OOM prevention, we prioritize NOT clearing this layer.
+            // We will handle dimming via CSS or just overlaying a semi-transparent 'fog' if needed, OR 
+            // accept that we don't dim the base lines for now to save memory.
+            // Let's keep them standard opacity.
 
             const polyline = L.polyline(latlngs, {
                 color: line.color,
@@ -88,6 +99,9 @@ export default function SubwayCanvasLayer({
             let weight = isZoomOut ? (isTransfer ? 2 : 1) : (isTransfer ? 3 : 2);
             let fillColor = "#fff";
 
+            // We handle selection highlight in highlightLayer to avoid redrawing all stations
+            // Base station style:
+
             const marker = L.circleMarker([station.lat, station.lng], {
                 radius: radius,
                 color: color,
@@ -95,12 +109,12 @@ export default function SubwayCanvasLayer({
                 fillOpacity: 1,
                 weight: weight,
                 renderer: myRenderer,
-                interactive: true,
                 bubblingMouseEvents: false
             });
 
             marker.on('click', () => onStationClick(station.name));
 
+            // Tooltips
             if (zoomLevel >= zoomThreshold) {
                 marker.bindTooltip(station.name, {
                     permanent: true,
@@ -113,7 +127,7 @@ export default function SubwayCanvasLayer({
             layerGroup.addLayer(marker);
         });
 
-    }, [zoomLevel, stations]);
+    }, [zoomLevel, stations]); // Re-runs on zoom, but NOT on 'trains' update!
 
     // 2. Highlight Layer: Selection & Path
     useEffect(() => {
@@ -125,7 +139,7 @@ export default function SubwayCanvasLayer({
 
         const myRenderer = L.canvas({ padding: 0.5 });
 
-        // Draw Path Line (Straight)
+        // Draw Path Line
         if (pathResult) {
             const pathCoords = pathResult.path.map((name) => {
                 const s = stations.find((st) => st.name === name);
@@ -133,6 +147,7 @@ export default function SubwayCanvasLayer({
             }).filter((c): c is [number, number] => c !== null);
 
             if (pathCoords.length > 0) {
+                // Neon Glow
                 layerGroup.addLayer(L.polyline(pathCoords, {
                     color: "#00ffcc",
                     weight: 6,
@@ -165,97 +180,85 @@ export default function SubwayCanvasLayer({
     }, [startStation, endStation, pathResult, stations]);
 
 
-    // 3. Dynamic Layer (Trains) - Linear Interpolation
-    const markersRef = useRef<{ [key: string]: HTMLDivElement }>({});
+    // 3. Dynamic Layer: Trains (DOM Markers with Caching)
+    // We use a ref to cache markers: Map<trainId, L.Marker>
+    const trainMarkersRef = useRef<Map<string, L.Marker>>(new Map());
 
     useEffect(() => {
+        // Note: DynamicLayer is still good for grouping, but strictly we are managing markers directly now.
+        // We can add them to dynamicLayerRef.current to manage lifecycle (remove on unmount).
+
         if (!dynamicLayerRef.current) return;
-        const layerGroup = dynamicLayerRef.current;
-        const currentMarkers = markersRef.current;
-        const activeIds = new Set<string>();
+        const layerGroup = dynamicLayerRef.current; // We will add new markers here
 
-        trains.forEach((train) => {
-            activeIds.add(train.id);
+        const currentMarkers = trainMarkersRef.current;
+        const activeTrainIds = new Set(trains.map(t => t.id));
 
-            // Position is directly provided by the hook
-            const lat = train.lat;
-            const lng = train.lng;
+        // 1. Update or Create Markers
+        if (zoomLevel >= 11) {
+            trains.forEach(train => {
+                let marker = currentMarkers.get(train.id);
 
-            // Resolve Line Color
-            const line = SUBWAY_LINES.find(l => l.id === train.lineId);
-            const lineColor = line?.color || "#000";
+                if (!marker) {
+                    // Create New Marker
+                    // Visual: SVG Icon for better consistency and styling
+                    const line = SUBWAY_LINES.find(l => l.id === train.lineId);
+                    const color = line?.color || "#000";
 
-            // Calculate simple rotation (angle between prev and next)
-            let angle = 0;
-            const s1 = stations.find(s => s.name === train.prevStation);
-            const s2 = stations.find(s => s.name === train.nextStation);
+                    // Simple Train SVG
+                    const svgIcon = `
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 6V17H20V6C20 6 20 4 12 4C4 4 4 6 4 6ZM4 17V19H20V17M6 10H9V13H6V10ZM15 10H18V13H15V10ZM6 19L5 21H7L8 19H16L17 21H19L18 19" fill="${color}" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+                        </svg>
+                    `;
 
-            if (s1 && s2) {
-                angle = Math.atan2(s2.lng - s1.lng, s2.lat - s1.lat) * (180 / Math.PI);
-            }
+                    const icon = L.divIcon({
+                        className: 'train-marker-container',
+                        html: `<div class="train-marker">${svgIcon}</div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    });
 
-            let markerElement = currentMarkers[train.id];
+                    marker = L.marker([train.lat, train.lng], {
+                        icon: icon,
+                        interactive: false
+                    });
 
-            if (!markerElement) {
-                // Create Marker DOM
-                markerElement = document.createElement('div');
-                markerElement.className = 'train-marker-container';
-                // Restore Original Train SVG
-                // A stylized front/top view of a train
-                markerElement.innerHTML = `
-                    <svg viewBox="0 0 24 24" width="30" height="30" style="overflow: visible;">
-                        <defs>
-                            <filter id="glow-${train.id}" x="-50%" y="-50%" width="200%" height="200%">
-                                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-                                <feMerge>
-                                    <feMergeNode in="coloredBlur"/>
-                                    <feMergeNode in="SourceGraphic"/>
-                                </feMerge>
-                            </filter>
-                        </defs>
-                        <path d="M4 6V17H20V6C20 6 20 4 12 4C4 4 4 6 4 6ZM4 17V19H20V17M6 10H9V13H6V10ZM15 10H18V13H15V10ZM6 19L5 21H7L8 19H16L17 21H19L18 19"
-                              fill="${lineColor}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" filter="url(#glow-${train.id})"/>
-                    </svg>
-                `;
+                    // Add tooltip
+                    marker.bindTooltip(`${train.lineName} (${train.headingTo})`, {
+                        direction: 'top',
+                        offset: [0, -10],
+                        className: 'train-label',
+                        permanent: false
+                    });
 
-                // Icon instance
-                const icon = L.divIcon({
-                    html: markerElement,
-                    className: 'train-div-icon',
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 15],
-                });
+                    marker.addTo(layerGroup);
+                    currentMarkers.set(train.id, marker);
+                } else {
+                    // Update Position
+                    // Leaflet handles smooth transition if CSS transition is set on the element?
+                    // Or just setLatLng is enough.
+                    marker.setLatLng([train.lat, train.lng]);
 
-                const marker = L.marker([lat, lng], { icon, zIndexOffset: 1000 }).addTo(layerGroup);
-                (markerElement as any)._leaflet_marker = marker;
-                currentMarkers[train.id] = markerElement;
-            }
-
-            // Update Position & Rotation
-            const markerInstance = (markerElement as any)._leaflet_marker as L.Marker;
-            if (markerInstance) {
-                markerInstance.setLatLng([lat, lng]);
-                const svg = markerElement.querySelector('svg');
-                if (svg) {
-                    // Apply rotation to align with the line
-                    svg.style.transform = `rotate(${angle}deg)`;
-                    svg.style.transition = 'transform 0.1s linear';
+                    // Update Tooltip content if needed (heading changes)
+                    const tooltip = marker.getTooltip();
+                    if (tooltip) {
+                        tooltip.setContent(`${train.lineName} (${train.headingTo})`);
+                    }
                 }
-            }
+            });
+        }
 
-        });
-
-        // Cleanup
-        Object.keys(currentMarkers).forEach((id) => {
-            if (!activeIds.has(id)) {
-                const markerElement = currentMarkers[id];
-                const marker = (markerElement as any)._leaflet_marker as L.Marker;
+        // 2. Remove Stale Markers (Trains that disappeared)
+        // Also remove ALL markers if zoom is too low
+        currentMarkers.forEach((marker, id) => {
+            if (!activeTrainIds.has(id) || zoomLevel < 11) {
                 marker.remove();
-                delete currentMarkers[id];
+                currentMarkers.delete(id);
             }
         });
 
-    }, [trains, stations]);
+    }, [trains, zoomLevel]);
 
     return null;
 }

@@ -22,13 +22,17 @@ export const SUBWAY_LINES: SubwayLine[] = [
                 "name": "연천",
                 "lat": 38.0963,
                 "lng": 127.0747,
-                "lines": []
+                "lines": [
+                    "1호선"
+                ]
             },
             {
                 "name": "청산",
                 "lat": 38.0133,
                 "lng": 127.0672,
-                "lines": []
+                "lines": [
+                    "1호선"
+                ]
             },
             {
                 "name": "소요산",
@@ -3468,8 +3472,8 @@ export const SUBWAY_LINES: SubwayLine[] = [
             },
             {
                 "name": "산곡",
-                "lat": 37.508547,
-                "lng": 126.70351,
+                "lat": 37.5097,
+                "lng": 126.7247,
                 "lines": [
                     "7호선"
                 ]
@@ -3501,16 +3505,16 @@ export const SUBWAY_LINES: SubwayLine[] = [
             },
             {
                 "name": "다산",
-                "lat": 37.6241,
-                "lng": 127.1497,
+                "lat": 37.62409,
+                "lng": 127.14973,
                 "lines": [
                     "8호선"
                 ]
             },
             {
                 "name": "동구릉",
-                "lat": 37.6044,
-                "lng": 127.1333,
+                "lat": 37.61055,
+                "lng": 127.13805,
                 "lines": [
                     "8호선"
                 ]
@@ -3526,16 +3530,16 @@ export const SUBWAY_LINES: SubwayLine[] = [
             },
             {
                 "name": "장자호수공원",
-                "lat": 37.5877,
-                "lng": 127.138,
+                "lat": 37.58768,
+                "lng": 127.13795,
                 "lines": [
                     "8호선"
                 ]
             },
             {
                 "name": "암사역사공원",
-                "lat": 37.5567,
-                "lng": 127.1356,
+                "lat": 37.55718,
+                "lng": 127.1375,
                 "lines": [
                     "8호선"
                 ]
