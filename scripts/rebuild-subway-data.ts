@@ -80,28 +80,49 @@ function addLinearEdges(names: string[]) {
     }
 }
 
-// 1. Harvest Lat/Lng from old file
-const EXTENSION_STATIONS = [
-    '연천', '청산',
-    '진접', '오남', '별내별가람',
-    '강일', '미사', '하남풍산', '하남시청', '하남검단산',
-    '산곡', '석남',
-    '별내', '다산', '동구릉', '장자호수공원', '암사역사공원',
-    '신논현', '논현', '신사'
-];
+// 1. Inject Extension Stations (Hardcoded to ensure robustness)
+// 7 Line Extension
+injectStation('산곡', 37.508547, 126.703510);
+// Seoknam is in JSON
 
-EXTENSION_STATIONS.forEach(name => {
-    const regex = new RegExp(`"name":\\s*"${name}",\\s*"lat":\\s*([0-9.]+),\\s*"lng":\\s*([0-9.]+)`, 'i');
-    const match = oldFileContent.match(regex);
-    if (match) {
-        injectStation(name, parseFloat(match[1]), parseFloat(match[2]));
-    }
-});
+// 8 Line Extension
+injectStation('암사역사공원', 37.5567, 127.1356);
+injectStation('장자호수공원', 37.5877, 127.1380);
+injectStation('동구릉', 37.6044, 127.1333);
+injectStation('다산', 37.6241, 127.1497);
+// Byeollae, Guri are in JSON
 
-// Inject GTX-A Stations
+// 4 Line Extension
+injectStation('별내별가람', 37.6676, 127.1155);
+injectStation('오남', 37.7055, 127.1917);
+injectStation('진접', 37.7195, 127.2033);
+
+// 5 Line Extension
+injectStation('강일', 37.5575, 127.1759);
+injectStation('미사', 37.5631, 127.1930);
+injectStation('하남풍산', 37.5521, 127.2039);
+injectStation('하남시청', 37.5417, 127.2069);
+injectStation('하남검단산', 37.5398, 127.2232);
+
+// Shinbundang Extension (Sinsa-Gangnam) - already in JSON? Let's be safe.
+injectStation('신논현', 37.504598, 127.025060); // In JSON? Line 9.
+injectStation('논현', 37.511093, 127.021415);   // In JSON? Line 7.
+injectStation('신사', 37.516094, 127.02058);    // In JSON? Line 3.
+// Wait, Shinbundang stations: Gangnam(2), Sinnonhyeon(9), Nonhyeon(7), Sinsa(3).
+// They exist in JSON but might not have Shinbundang line attached on old JSON.
+// addLineToStation handles that.
+// But we need to ensure they are connected.
+
+// 1 Line Extension (Yeoncheon) - Hardcode if missing
+// They were harvested before.
+injectStation('연천', 38.0963, 127.0747);
+injectStation('청산', 38.0133, 127.0672);
+
+// GTX-A Stations
 injectStation('성남', 37.3947, 127.1112);
 injectStation('동탄', 37.1994, 127.0965);
 injectStation('구성', 37.2991, 127.1058);
+// Suseo is in JSON
 
 // Inject Lines to Existing Stations to pass Strict Check
 addLineToStation('수서', 'GTX-A');
@@ -113,9 +134,27 @@ addLineToStation('강남', '신분당선');
 addLineToStation('신사', '신분당선');
 addLineToStation('논현', '신분당선');
 addLineToStation('신논현', '신분당선');
+addLineToStation('광교', '신분당선'); // Ensure extensions have line
 
 addLineToStation('산곡', '7호선');
 addLineToStation('석남', '7호선');
+
+addLineToStation('별내', '8호선');
+addLineToStation('다산', '8호선');
+addLineToStation('동구릉', '8호선');
+addLineToStation('장자호수공원', '8호선');
+addLineToStation('암사역사공원', '8호선');
+addLineToStation('구리', '8호선'); // Injected via linear edge but station needs line
+
+addLineToStation('하남검단산', '5호선');
+addLineToStation('하남시청', '5호선');
+addLineToStation('하남풍산', '5호선');
+addLineToStation('미사', '5호선');
+addLineToStation('강일', '5호선');
+
+addLineToStation('진접', '4호선');
+addLineToStation('오남', '4호선');
+addLineToStation('별내별가람', '4호선');
 
 // 2. Stitch Graph with Edges
 addLinearEdges(['연천', '청산', '소요산']);
@@ -125,7 +164,7 @@ addLinearEdges(['부평구청', '산곡', '석남']);
 addLinearEdges(['암사', '암사역사공원', '장자호수공원', '구리', '동구릉', '다산', '별내']);
 addLinearEdges(['강남', '신논현', '논현', '신사']);
 addLinearEdges(['수서', '성남', '구성', '동탄']);
-addLinearEdges(['덕소', '양평(중앙)', '지평']); // Use correct name for Edging? Station map key is name.
+addLinearEdges(['덕소', '도심', '팔당', '운길산', '양수', '신원', '국수', '아신', '오빈', '양평(중앙)', '원덕', '용문', '지평']);
 // Check if "양평(중앙)" exists in map. Yes.
 
 addLinearEdges(['북한산우이', '솔밭공원', '4.19민주묘지', '가오리', '화계', '삼양', '삼양사거리', '솔샘', '북한산보국문', '정릉', '성신여대입구', '보문', '신설동']);
@@ -257,7 +296,7 @@ const LINES_CONFIG = [
 
 const REFINED_CONFIG = [
     ...LINES_CONFIG,
-    { id: 'Gyeongui-Main', name: '경의중앙선', color: '#77C4A3', waypoints: ['문산', '대곡', '디지털미디어시티', '공덕', '용산', '이촌', '청량리', '망우', '덕소', '양평(중앙)', '지평'], avoid: ['서울', '신촌(경의선)'] },
+    { id: 'Gyeongui-Main', name: '경의중앙선', color: '#77C4A3', waypoints: ['문산', '대곡', '디지털미디어시티', '공덕', '용산', '이촌', '청량리', '망우', '덕소', '양수', '양평(중앙)', '용문', '지평'], avoid: ['서울', '신촌(경의선)'] },
     { id: 'Gyeongui-Seoul', name: '경의중앙선', color: '#77C4A3', waypoints: ['가좌', '신촌(경의선)', '서울'], avoid: ['디지털미디어시티'] },
 ];
 
