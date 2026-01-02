@@ -60,20 +60,17 @@ export default function SubwayCanvasLayer({
         boardingStations: number[]; // Indices of stations where we board/transfer onto this line
     }
 
-    const { activeLineDetails, activeLineIds } = useMemo(() => {
+    const { activeLineDetails, activeLineIds, activeLineNames } = useMemo(() => {
         const details = new Map<string, LineSegment>();
         const ids = new Set<string>();
+        const names = new Set<string>();
 
         if (!pathResult || !pathResult.path || pathResult.path.length < 2) {
-            return { activeLineDetails: details, activeLineIds: ids };
+            return { activeLineDetails: details, activeLineIds: ids, activeLineNames: names };
         }
 
         // Helper to find line config and indices
         const getLineInfo = (stationName: string, lineName: string) => {
-            // Find all matching line IDs for the name (Inner/Outer loops have same name different IDs)
-            // But for index calculation, we need the specific ID that connects them.
-            // Simplified: we iterate SUBWAY_LINES to find the one containing both stations?
-            // Actually, we do that in the loop below.
             return SUBWAY_LINES.filter(l => l.name === lineName);
         };
 
@@ -91,8 +88,10 @@ export default function SubwayCanvasLayer({
                 const commonLineNames = s1.lines.filter(l => s2.lines.includes(l));
 
                 commonLineNames.forEach(lName => {
+                    // Add Name to Set for broad context styling
+                    names.add(lName);
+
                     // Find the specific Line Object that contains both stations (to get indices)
-                    // If multiple (e.g. Line 2 Inner/Outer), check both.
                     const candidates = SUBWAY_LINES.filter(l => l.name === lName);
 
                     candidates.forEach(line => {
@@ -109,12 +108,6 @@ export default function SubwayCanvasLayer({
                             // Update or Create Segment Info
                             const existing = details.get(line.id);
 
-                            // We merge ranges. 
-                            // Initial: [min, max] = [min(i1, i2), max(i1, i2)]?
-                            // No, for filtering "on path", we need the range covered by the path.
-                            // If path is A(10) -> B(12) -> C(15), range is [10, 15].
-                            // If path is C(15) -> B(12), range is [12, 15] but direction is -1.
-
                             const min = Math.min(idx1, idx2);
                             const max = Math.max(idx1, idx2);
 
@@ -129,12 +122,7 @@ export default function SubwayCanvasLayer({
                                 // Extend range
                                 existing.startIdx = Math.min(existing.startIdx, min);
                                 existing.endIdx = Math.max(existing.endIdx, max);
-                                // If this segment starts a new leg (e.g. transfer), add boarding?
-                                // Actually active path segments are continuous per line mostly.
-                                // But if we transfer A->B (Line1), then C->D (Line1 again?), possible.
-                                // For simple logic: add idx1 to boarding if it's a "boarding point".
-                                // Boarding point is s1 of a segment.
-                                // We'll filter duplicates later or just check proximity to any boarding station.
+
                                 if (!existing.boardingStations.includes(idx1)) {
                                     existing.boardingStations.push(idx1);
                                 }
@@ -144,7 +132,7 @@ export default function SubwayCanvasLayer({
                 });
             }
         }
-        return { activeLineDetails: details, activeLineIds: ids };
+        return { activeLineDetails: details, activeLineIds: ids, activeLineNames: names };
     }, [pathResult, stations]);
 
     // 1. Static Layer: Draw Lines & Stations
@@ -161,16 +149,34 @@ export default function SubwayCanvasLayer({
             const latlngs = line.stations.map(s => [s.lat, s.lng] as [number, number]);
 
             // Optimization: If route active, gray out unused lines
-            // Actually, user said "exclude that section (path)... rest is gray".
-            // So we draw EVERYTHING gray here, and let Highlight Layer draw the color path on top.
+            // UPDATED: Use Line NAME for styling context. 
+            // If "1호선" is active, ALL "1호선" segments (Soyosan, Incheon, etc.) will be Dark Gray.
             const color = isRouteActive ? "#e5e7eb" : line.color;
             const opacity = isRouteActive ? 0.3 : 0.85;
             const weight = isRouteActive ? 2 : 4; // Thinner inactive lines
 
+            let drawColor = color;
+            let drawOpacity = opacity;
+            let drawWeight = weight;
+
+            if (isRouteActive) {
+                if (activeLineNames.has(line.name)) {
+                    // It's part of an active line (Broad Context) -> Dark Gray
+                    drawColor = "#374151"; // Dark Gray (gray-700)
+                    drawOpacity = 0.6;
+                    drawWeight = 3;
+                } else {
+                    // Completely irrelevant line -> Light Gray (Background)
+                    drawColor = "#e5e7eb"; // Gray-200
+                    drawOpacity = 0.2;
+                    drawWeight = 2;
+                }
+            }
+
             const polyline = L.polyline(latlngs, {
-                color: color,
-                weight: weight,
-                opacity: opacity,
+                color: drawColor,
+                weight: drawWeight,
+                opacity: drawOpacity,
                 lineCap: "round",
                 lineJoin: "round",
                 renderer: myRenderer,
@@ -185,27 +191,17 @@ export default function SubwayCanvasLayer({
 
         stations.forEach((station) => {
             // Find if this station is on an active line
-            const isOnActiveLine = station.lines.some(lName => {
-                // Determine if this line name corresponds to any active line ID
-                // Simplified: Just use activeLineDetails/Ids? 
-                // We only have activeLineIds (IDs). We need to map Name -> IDs.
-                // Just checking if any of its lines are in the active names set?
-                // Let's use the primary line logic for color.
-                return true;
-            });
-            // Actually, for station coloring, preserving the "Dark Gray" context is nice.
+            // ... (Logic kept simple: dim all non-path stations)
 
             const primaryLine = SUBWAY_LINES.find(l => l.name === station.lines[0]);
 
             let baseColor = primaryLine?.color || "#888";
             if (isRouteActive) {
-                // If station is on an active line ID, make it dark gray?
-                // Or just keep simple dimming. User asked for "Dark Gray for rest of line".
-                // Let's dim all non-path stations to light gray for minimal noise.
+                // Dim stations not on path
                 baseColor = "#d1d5db";
             }
 
-            // ... (Rest of station sizing logic is fine to keep simple)
+            // ... (Rest of station sizing logic)
             let radius = isZoomOut ? (station.lines.length > 1 ? 4 : 2) : (station.lines.length > 1 ? 6 : 4);
             let weight = isZoomOut ? (station.lines.length > 1 ? 2 : 1) : (station.lines.length > 1 ? 3 : 2);
             if (isRouteActive) {
@@ -237,7 +233,7 @@ export default function SubwayCanvasLayer({
             layerGroup.addLayer(marker);
         });
 
-    }, [zoomLevel, stations, pathResult, activeLineIds]);
+    }, [zoomLevel, stations, pathResult, activeLineNames]);
 
     // 2. Highlight Layer: Selection & Path
     useEffect(() => {
