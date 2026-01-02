@@ -1,8 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import MapBackground from "@/components/MapBackground";
+import dynamic from "next/dynamic";
 import Logo from "@/components/Logo";
+
+// Dynamically import MapBackground with SSR disabled
+const MapBackground = dynamic(() => import("@/components/MapBackground"), {
+    ssr: false,
+    loading: () => <div className="w-full h-full bg-gray-100 animate-pulse" /> // Optional loading state
+});
 import { SUBWAY_LINES, Station } from "@/data/subway-lines";
 import { useRealtimeTrains } from "@/hooks/useRealtimeTrains";
 import { findShortestPath, PathResult } from "@/utils/pathfinding";
