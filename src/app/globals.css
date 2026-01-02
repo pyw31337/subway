@@ -11,6 +11,10 @@ body {
     color: var(--foreground);
     background: var(--background);
     font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    /* Prevent 8px margin scroll */
 }
 
 /* Leaflet Station Label Styles */
