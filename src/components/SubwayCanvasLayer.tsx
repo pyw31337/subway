@@ -245,14 +245,10 @@ export default function SubwayCanvasLayer({
             // 1. The Marker
             layerGroup.addLayer(L.circleMarker([s.lat, s.lng], {
                 radius: radius,
-                color: (isStart || isEnd) ? "#fff" : color, // White border for Start/End? No, standard is Stroke=Color.
-                // Re-read: "Start Green, End Red". Usually implies Solid Fill.
-                // Let's stick to what I planned: Green Fill, Dark Green Stroke.
-                color: (isStart || isEnd) ? "#fff" : color, // Actually white stroke looks good on colored fill
+                color: (isStart || isEnd) ? "#14532d" : color, // Dark stroke for start/end
                 fillColor: fillColor,
                 fillOpacity: 1,
                 weight: weight,
-                color: (isStart || isEnd) ? "#14532d" : color, // Dark stroke for start/end
                 renderer: myRenderer
             }));
 
