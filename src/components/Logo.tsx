@@ -1,16 +1,34 @@
 export default function Logo() {
     return (
-        <div className="absolute top-6 left-6 z-[2000] pointer-events-none select-none flex items-center gap-3">
-            <div className="bg-gradient-to-br from-blue-600 to-cyan-500 text-white p-2.5 rounded-xl shadow-lg transform -rotate-6 border border-white/20">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-                    <path d="M4.5 3.75a3 3 0 00-3 3v10.5a3 3 0 003 3h15a3 3 0 003-3V6.75a3 3 0 00-3-3h-15zm4.125 3a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5zm-3.873 8.703a4.126 4.126 0 017.746 0 .75.75 0 01-.351.92 7.47 7.47 0 01-3.522.877 7.47 7.47 0 01-3.522-.877.75.75 0 01-.351-.92zM15.375 6.75a2.25 2.25 0 100 4.5 2.25 2.25 0 000-4.5zm-3.873 8.703a4.126 4.126 0 017.746 0 .75.75 0 01-.351.92 7.47 7.47 0 01-3.522.877 7.47 7.47 0 01-3.522-.877.75.75 0 01-.351-.92z" />
-                </svg>
+        <div className="absolute top-6 left-6 z-[2000] pointer-events-none select-none flex items-center gap-4">
+            {/* Icon Block */}
+            <div className="relative group">
+                <div className="absolute inset-0 bg-cyan-500 rounded-2xl blur opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
+                <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 text-white p-3 rounded-2xl shadow-2xl border border-slate-700/50 transform transition-transform group-hover:scale-105 duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-cyan-400">
+                        <path d="M5 15h14" />
+                        <path d="M5 9h14" />
+                        <path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
+                        <path d="M8 21v-2" />
+                        <path d="M16 21v-2" />
+                    </svg>
+                </div>
             </div>
-            <div>
-                <h1 className="text-4xl font-black tracking-tighter italic text-gray-900 drop-shadow-sm flex items-center">
-                    Subway <span className="text-cyan-600 ml-1">Live</span>
+
+            {/* Text Block */}
+            <div className="flex flex-col">
+                <h1 className="text-4xl font-black tracking-tighter text-slate-900 drop-shadow-sm flex items-center gap-0.5">
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">Subway</span>
+                    <span className="text-cyan-600 italic relative">
+                        Live
+                        <span className="absolute -top-1 -right-2 w-2 h-2 bg-red-500 rounded-full animate-ping"></span>
+                        <span className="absolute -top-1 -right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </span>
                 </h1>
-                <p className="text-[10px] text-gray-500 font-bold tracking-[0.2em] uppercase pl-0.5 opacity-80">Seoul Metro Real-time</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                    <div className="h-px w-8 bg-slate-300"></div>
+                    <p className="text-[10px] text-slate-500 font-extrabold tracking-[0.3em] uppercase">Seoul Metro</p>
+                </div>
             </div>
         </div>
     );

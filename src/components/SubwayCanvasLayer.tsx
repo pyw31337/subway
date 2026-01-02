@@ -5,7 +5,6 @@ import { useMap } from "react-leaflet";
 import L from 'leaflet';
 import { SUBWAY_LINES, Station } from "@/data/subway-lines";
 import { Train } from "@/hooks/useRealtimeTrains";
-import { getCatmullRomControlPoints, getPointOnCubicBezier, getTangentAngleOnCubicBezier } from "@/utils/bezier";
 
 interface SubwayCanvasLayerProps {
     stations: Station[];
@@ -52,86 +51,30 @@ export default function SubwayCanvasLayer({
         };
     }, [map]);
 
-    // Curve Lookup Map: "StationA|StationB" -> [CP1, CP2]
-    const curveMapRef = useRef<Map<string, [L.Point, L.Point]>>(new Map());
-
-    // 0. Pre-calculate Curves (Catmull-Rom to Cubic Bezier)
-    useEffect(() => {
-        const curveMap = new Map<string, [L.Point, L.Point]>();
-
-        SUBWAY_LINES.forEach((line) => {
-            const stations = line.stations;
-            for (let i = 0; i < stations.length - 1; i++) {
-                const p0 = stations[Math.max(0, i - 1)];
-                const p1 = stations[i];
-                const p2 = stations[i + 1];
-                const p3 = stations[Math.min(stations.length - 1, i + 2)];
-
-                // We use Lat/Lng directly as x/y for the math. 
-                const pt0 = { x: p0.lat, y: p0.lng };
-                const pt1 = { x: p1.lat, y: p1.lng };
-                const pt2 = { x: p2.lat, y: p2.lng };
-                const pt3 = { x: p3.lat, y: p3.lng };
-
-                const [cp1, cp2] = getCatmullRomControlPoints(pt0, pt1, pt2, pt3, 0.5);
-
-                curveMap.set(`${p1.name}|${p2.name}`, [
-                    new L.Point(cp1.x, cp1.y),
-                    new L.Point(cp2.x, cp2.y)
-                ]);
-            }
-        });
-        curveMapRef.current = curveMap;
-    }, [stations]);
 
     // 1. Static Layer: Draw Lines & Stations
-    // Only redraw if ZOOM changes (for marker size) or Theme changes
-    // Assuming 'stations' prop remains stable reference ideally, or check length
+    // Redraw whenever Zoom, Theme, or Path Active State changes
     useEffect(() => {
         if (!staticLayerRef.current) return;
         const layerGroup = staticLayerRef.current;
         layerGroup.clearLayers();
 
-        // Canvas renderer for performance
         const myRenderer = L.canvas({ padding: 0.5 });
+        const isPathActive = !!pathResult;
 
-        // Draw Bezier Lines
+        // Draw Lines
         SUBWAY_LINES.forEach((line) => {
-            const pathPoints: [number, number][] = [];
+            const latlngs = line.stations.map(s => [s.lat, s.lng] as [number, number]);
 
-            for (let i = 0; i < line.stations.length - 1; i++) {
-                const s1 = line.stations[i];
-                const s2 = line.stations[i + 1];
-                const key = `${s1.name}|${s2.name}`;
-                const cps = curveMapRef.current.get(key);
+            // If path is active, draw all background lines in GRAY
+            const color = isPathActive ? "#e5e7eb" : line.color; // Gray-200
+            const opacity = isPathActive ? 0.3 : 0.85; // Lower opacity for background
+            const weight = isPathActive ? 3 : 4;
 
-                if (cps) {
-                    const [cp1, cp2] = cps;
-                    // Refine curve into segments
-                    const SEGMENTS = 15; // Smoothness
-                    for (let j = 0; j <= SEGMENTS; j++) {
-                        const t = j / SEGMENTS;
-                        // Cubic Bezier interpolation in LatLng space
-                        const pt = getPointOnCubicBezier(
-                            { x: s1.lat, y: s1.lng },
-                            { x: cp1.x, y: cp1.y },
-                            { x: cp2.x, y: cp2.y },
-                            { x: s2.lat, y: s2.lng },
-                            t
-                        );
-                        pathPoints.push([pt.x, pt.y]);
-                    }
-                } else {
-                    // Fallback to straight line
-                    pathPoints.push([s1.lat, s1.lng]);
-                    pathPoints.push([s2.lat, s2.lng]);
-                }
-            }
-
-            const polyline = L.polyline(pathPoints, {
-                color: line.color,
-                weight: 4,
-                opacity: 0.85,
+            const polyline = L.polyline(latlngs, {
+                color: color,
+                weight: weight,
+                opacity: opacity,
                 lineCap: "round",
                 lineJoin: "round",
                 renderer: myRenderer,
@@ -141,35 +84,51 @@ export default function SubwayCanvasLayer({
         });
 
         // Draw Stations
+        // Filter out stations if zoom is low? Or keep them?
+        // User wants "Pins" on click. Regular stations are dots.
+        // If path active, maybe dim non-path stations?
         const isZoomOut = zoomLevel < 12;
-        const zoomThreshold = 13;
 
         stations.forEach((station) => {
             const primaryLine = SUBWAY_LINES.find(l => l.name === station.lines[0]);
-            const color = primaryLine?.color || "#888";
-            const isTransfer = station.lines.length > 1;
-
-            let radius = isZoomOut ? (isTransfer ? 4 : 2) : (isTransfer ? 6 : 4);
-            let weight = isZoomOut ? (isTransfer ? 2 : 1) : (isTransfer ? 3 : 2);
+            let color = primaryLine?.color || "#888";
             let fillColor = "#fff";
+            let opacity = 1;
 
-            // We handle selection highlight in highlightLayer to avoid redrawing all stations
-            // Base station style:
+            if (isPathActive) {
+                const inPath = pathResult.path.includes(station.name);
+                if (!inPath) {
+                    color = "#d1d5db"; // Gray-300
+                    fillColor = "#f3f4f6";
+                    opacity = 0.5;
+                }
+            }
+
+            const isTransfer = station.lines.length > 1;
+            let radius = isZoomOut ? (isTransfer ? 3 : 1.5) : (isTransfer ? 5 : 3.5);
+            let weight = isZoomOut ? (isTransfer ? 1.5 : 1) : (isTransfer ? 2 : 1.5);
 
             const marker = L.circleMarker([station.lat, station.lng], {
                 radius: radius,
                 color: color,
                 fillColor: fillColor,
-                fillOpacity: 1,
+                fillOpacity: opacity === 1 ? 1 : 0.8,
+                opacity: opacity,
                 weight: weight,
                 renderer: myRenderer,
+                clickable: true,
+                interactive: true,
                 bubblingMouseEvents: false
-            });
+            } as any);
 
             marker.on('click', () => onStationClick(station.name));
 
             // Tooltips
-            if (zoomLevel >= zoomThreshold) {
+            // Show tooltips for all stations if zoom is high enough
+            // If path is active, maybe only show tooltips for path stations?
+            const showTooltip = zoomLevel >= 13 && (!isPathActive || pathResult.path.includes(station.name));
+
+            if (showTooltip) {
                 marker.bindTooltip(station.name, {
                     permanent: true,
                     direction: "top",
@@ -181,9 +140,10 @@ export default function SubwayCanvasLayer({
             layerGroup.addLayer(marker);
         });
 
-    }, [zoomLevel, stations]); // Re-runs on zoom, but NOT on 'trains' update!
+    }, [zoomLevel, stations, pathResult]);
 
-    // 2. Highlight Layer: Selection & Path
+
+    // 2. Highlight Layer: Selected Path & Pins
     useEffect(() => {
         if (!highlightLayerRef.current) return;
         const layerGroup = highlightLayerRef.current;
@@ -193,157 +153,151 @@ export default function SubwayCanvasLayer({
 
         const myRenderer = L.canvas({ padding: 0.5 });
 
-        // Draw Path Line with Curves
+        // Draw Path Line (COLOR)
         if (pathResult) {
-            const refinedPath: [number, number][] = [];
-
             for (let i = 0; i < pathResult.path.length - 1; i++) {
                 const sname1 = pathResult.path[i];
                 const sname2 = pathResult.path[i + 1];
-
                 const s1 = stations.find(s => s.name === sname1);
                 const s2 = stations.find(s => s.name === sname2);
 
                 if (s1 && s2) {
-                    let cps = curveMapRef.current.get(`${sname1}|${sname2}`);
-                    let isReverse = false;
+                    // Find common line for color
+                    const commonLine = s1.lines.find(l => s2.lines.includes(l));
+                    const lineData = SUBWAY_LINES.find(l => l.name === commonLine);
+                    const color = lineData ? lineData.color : "#000";
 
-                    if (!cps) {
-                        cps = curveMapRef.current.get(`${sname2}|${sname1}`);
-                        isReverse = true;
-                    }
-
-                    if (cps) {
-                        const [cp1, cp2] = cps;
-                        const SEGMENTS = 15;
-                        for (let j = 0; j <= SEGMENTS; j++) {
-                            // If Reverse (B->A), we iterate j=0..1. 
-                            // Curve is A->B. P1=A, P2=B.
-                            // We want to generate points from B to A.
-                            // So t should go from 1 to 0.
-                            const t = isReverse ? 1 - (j / SEGMENTS) : j / SEGMENTS;
-
-                            const pt = getPointOnCubicBezier(
-                                { x: s1.lat, y: s1.lng }, // Line Start (P1)
-                                { x: cp1.x, y: cp1.y },
-                                { x: cp2.x, y: cp2.y },
-                                { x: s2.lat, y: s2.lng }, // Line End (P2)
-                                t
-                            );
-                            refinedPath.push([pt.x, pt.y]);
-                        }
-                    } else {
-                        refinedPath.push([s1.lat, s1.lng]);
-                        refinedPath.push([s2.lat, s2.lng]);
-                    }
+                    // Draw Segment
+                    layerGroup.addLayer(L.polyline([[s1.lat, s1.lng], [s2.lat, s2.lng]], {
+                        color: color,
+                        weight: 6,
+                        opacity: 1,
+                        renderer: myRenderer
+                    }));
                 }
-            }
-
-            if (refinedPath.length > 0) {
-                // Neon Glow
-                layerGroup.addLayer(L.polyline(refinedPath, {
-                    color: "#00ffcc",
-                    weight: 6,
-                    opacity: 1,
-                    renderer: myRenderer
-                }));
             }
         }
 
-        // Draw Selected Stations (Overlays)
-        const drawHighlightMarker = (name: string, type: 'start' | 'end' | 'path') => {
-            const s = stations.find(st => st.name === name);
-            if (!s) return;
+        // Draw Pins (Start/End/Pass)
+        const createPinIcon = (type: 'start' | 'end') => {
+            const label = type === 'start' ? '출발' : '도착';
+            const bgClass = type === 'start' ? 'bg-green-600' : 'bg-red-600';
+            const ringClass = type === 'start' ? 'ring-green-200' : 'ring-red-200';
 
-            const color = type === 'start' ? "#3b82f6" : (type === 'end' ? "#ef4444" : "#00ffcc");
-            const radius = type === 'path' ? 5 : 8;
-
-            layerGroup.addLayer(L.circleMarker([s.lat, s.lng], {
-                radius: radius,
-                color: "#000",
-                fillColor: color,
-                fillOpacity: 1,
-                weight: 2,
-                renderer: myRenderer
-            }));
+            // Custom Pin HTML
+            return L.divIcon({
+                className: '',
+                html: `
+                    <div class="relative flex flex-col items-center justify-center transform -translate-x-1/2 -translate-y-full" style="width: 60px; height: 70px;">
+                        <div class="${bgClass} text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md mb-2 whitespace-nowrap z-20">
+                            ${label}
+                        </div>
+                        <div class="w-10 h-10 ${bgClass} rounded-full border-[3px] border-white shadow-xl flex items-center justify-center relative z-10 ring-4 ${ringClass}">
+                            <div class="w-3 h-3 bg-white rounded-full"></div>
+                        </div>
+                        <div class="w-1 h-5 bg-gray-400/80 -mt-2 rounded-b-full"></div>
+                        <div class="absolute bottom-0 w-8 h-2 bg-black/20 rounded-[100%] blur-[2px] transform translate-y-1"></div>
+                    </div>
+                `,
+                iconSize: [60, 70],
+                iconAnchor: [30, 68], // Anchor at bottom tip
+            });
         };
 
-        if (startStation) drawHighlightMarker(startStation, 'start');
-        if (endStation) drawHighlightMarker(endStation, 'end');
-    }, [startStation, endStation, pathResult, stations]);
+        if (startStation) {
+            const s = stations.find(st => st.name === startStation);
+            if (s) {
+                L.marker([s.lat, s.lng], { icon: createPinIcon('start'), zIndexOffset: 2000 }).addTo(layerGroup);
+            }
+        }
+        if (endStation) {
+            const s = stations.find(st => st.name === endStation);
+            if (s) {
+                L.marker([s.lat, s.lng], { icon: createPinIcon('end'), zIndexOffset: 2000 }).addTo(layerGroup);
+            }
+        }
+
+    }, [pathResult, stations, startStation, endStation]);
 
 
-    // 3. Dynamic Layer: Trains (DOM Markers with Caching)
-    // We use a ref to cache markers: Map<trainId, L.Marker>
+    // 3. Dynamic Layer: Trains
     const trainMarkersRef = useRef<Map<string, L.Marker>>(new Map());
 
     useEffect(() => {
-        // Note: DynamicLayer is still good for grouping, but strictly we are managing markers directly now.
-        // We can add them to dynamicLayerRef.current to manage lifecycle (remove on unmount).
-
         if (!dynamicLayerRef.current) return;
-        const layerGroup = dynamicLayerRef.current; // We will add new markers here
-
+        const layerGroup = dynamicLayerRef.current;
         const currentMarkers = trainMarkersRef.current;
-        const activeTrainIds = new Set(trains.map(t => t.id));
 
-        // 1. Update or Create Markers
-        if (zoomLevel >= 11) {
-            trains.forEach(train => {
+        // Filter trains if path is active
+        // Only show trains that are on the edges of the path
+        let visibleTrains = trains;
+        if (pathResult) {
+            const pathSet = new Set<string>();
+            // Create "A|B" and "B|A" keys for all edges
+            for (let i = 0; i < pathResult.path.length - 1; i++) {
+                pathSet.add(`${pathResult.path[i]}|${pathResult.path[i + 1]}`);
+                pathSet.add(`${pathResult.path[i + 1]}|${pathResult.path[i]}`);
+            }
+
+            visibleTrains = trains.filter(t => {
+                const key = `${t.prevStation}|${t.nextStation}`;
+                return pathSet.has(key);
+            });
+        }
+
+        const activeTrainIds = new Set(visibleTrains.map(t => t.id));
+
+        // 1. Update/Create Markers
+        if (zoomLevel >= 11) { // Hide trains when zoomed out too much
+            visibleTrains.forEach(train => {
                 let marker = currentMarkers.get(train.id);
 
                 if (!marker) {
-                    // Create New Marker
-                    // Visual: SVG Icon for better consistency and styling
                     const line = SUBWAY_LINES.find(l => l.id === train.lineId);
                     const color = line?.color || "#000";
 
-                    // Simple Train SVG
+                    // Train SVG
                     const svgIcon = `
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M4 6V17H20V6C20 6 20 4 12 4C4 4 4 6 4 6ZM4 17V19H20V17M6 10H9V13H6V10ZM15 10H18V13H15V10ZM6 19L5 21H7L8 19H16L17 21H19L18 19" fill="${color}" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));">
+                             <rect x="4" y="6" width="16" height="12" rx="2" fill="${color}" stroke="white" stroke-width="2"/>
+                             <path d="M6 18V20" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+                             <path d="M18 18V20" stroke="#555" stroke-width="2" stroke-linecap="round"/>
+                             <rect x="7" y="9" width="4" height="4" rx="0.5" fill="white"/>
+                             <rect x="13" y="9" width="4" height="4" rx="0.5" fill="white"/>
                         </svg>
                     `;
 
                     const icon = L.divIcon({
                         className: 'train-marker-container',
-                        html: `<div class="train-marker">${svgIcon}</div>`,
-                        iconSize: [24, 24],
-                        iconAnchor: [12, 12]
+                        html: `<div class="train-marker transition-transform duration-300">${svgIcon}</div>`,
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14]
                     });
 
                     marker = L.marker([train.lat, train.lng], {
                         icon: icon,
-                        interactive: false
+                        interactive: false,
+                        zIndexOffset: 1500
                     });
 
-                    // Add tooltip
-                    marker.bindTooltip(`${train.lineName} (${train.headingTo})`, {
-                        direction: 'top',
-                        offset: [0, -10],
-                        className: 'train-label',
-                        permanent: false
-                    });
+                    // Add tooltip (optional)
+                    // marker.bindTooltip(...)
 
                     marker.addTo(layerGroup);
                     currentMarkers.set(train.id, marker);
                 } else {
                     // Update Position
-                    // Leaflet handles smooth transition if CSS transition is set on the element?
-                    // Or just setLatLng is enough.
+                    // Just set LatLng. CSS transition on leafet-marker-icon? 
+                    // Leaflet moves marker via transform.
+                    // For smooth animation, we rely on the rapid updates of lat/lng from hook (60fps ideally)
+                    // or CSS transition on Leaflet layer (might be glitchy).
+                    // Stick to rapid updates.
                     marker.setLatLng([train.lat, train.lng]);
-
-                    // Update Tooltip content if needed (heading changes)
-                    const tooltip = marker.getTooltip();
-                    if (tooltip) {
-                        tooltip.setContent(`${train.lineName} (${train.headingTo})`);
-                    }
                 }
             });
         }
 
-        // 2. Remove Stale Markers (Trains that disappeared)
-        // Also remove ALL markers if zoom is too low
+        // 2. Remove Stale
         currentMarkers.forEach((marker, id) => {
             if (!activeTrainIds.has(id) || zoomLevel < 11) {
                 marker.remove();
@@ -351,7 +305,7 @@ export default function SubwayCanvasLayer({
             }
         });
 
-    }, [trains, zoomLevel]);
+    }, [trains, zoomLevel, pathResult]);
 
     return null;
 }
