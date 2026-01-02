@@ -97,6 +97,9 @@ function MapBackground() {
                 zoomControl={false}
                 attributionControl={false}
                 preferCanvas={true}
+                minZoom={9}
+                maxBounds={[[36.5, 125.5], [38.5, 128.5]]} // Seoul/Gyeonggi area with buffer
+                maxBoundsViscosity={1.0} // Sticky bounds
                 style={{ height: "100%", width: "100%", background: "#f8f9fa" }}
             >
                 {/* Internal component to track zoom */}

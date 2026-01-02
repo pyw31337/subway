@@ -55,7 +55,7 @@ body {
     background: transparent;
     border: none;
     font-size: 16px;
-    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
+    /* Removed drop-shadow for performance optimization */
     transition: transform 0.1s linear;
     /* Smooth movement if we want CSS interpolation */
 }
