@@ -200,19 +200,21 @@ export default function SubwayCanvasLayer({
                 // Create Marker DOM
                 markerElement = document.createElement('div');
                 markerElement.className = 'train-marker-container';
-                // SVG inner
+                // Restore Original Train SVG
+                // A stylized front/top view of a train
                 markerElement.innerHTML = `
                     <svg viewBox="0 0 24 24" width="30" height="30" style="overflow: visible;">
                         <defs>
                             <filter id="glow-${train.id}" x="-50%" y="-50%" width="200%" height="200%">
-                                <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
                                 <feMerge>
                                     <feMergeNode in="coloredBlur"/>
                                     <feMergeNode in="SourceGraphic"/>
                                 </feMerge>
                             </filter>
                         </defs>
-                         <path d="M12 2L2 22h20L12 2z" fill="${lineColor}" stroke="#fff" stroke-width="2" filter="url(#glow-${train.id})" />
+                        <path d="M4 6V17H20V6C20 6 20 4 12 4C4 4 4 6 4 6ZM4 17V19H20V17M6 10H9V13H6V10ZM15 10H18V13H15V10ZM6 19L5 21H7L8 19H16L17 21H19L18 19"
+                              fill="${lineColor}" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" filter="url(#glow-${train.id})"/>
                     </svg>
                 `;
 
@@ -235,6 +237,7 @@ export default function SubwayCanvasLayer({
                 markerInstance.setLatLng([lat, lng]);
                 const svg = markerElement.querySelector('svg');
                 if (svg) {
+                    // Apply rotation to align with the line
                     svg.style.transform = `rotate(${angle}deg)`;
                     svg.style.transition = 'transform 0.1s linear';
                 }
