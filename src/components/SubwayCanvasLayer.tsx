@@ -180,41 +180,77 @@ export default function SubwayCanvasLayer({
     }, [startStation, endStation, pathResult, stations]);
 
 
-    // 3. Dynamic Layer: Trains
+    // 3. Dynamic Layer: Trains (DOM Markers with Caching)
+    // We use a ref to cache markers: Map<trainId, L.Marker>
+    const trainMarkersRef = useRef<Map<string, L.Marker>>(new Map());
+
     useEffect(() => {
+        // Note: DynamicLayer is still good for grouping, but strictly we are managing markers directly now.
+        // We can add them to dynamicLayerRef.current to manage lifecycle (remove on unmount).
+
         if (!dynamicLayerRef.current) return;
-        const layerGroup = dynamicLayerRef.current;
-        layerGroup.clearLayers();
+        const layerGroup = dynamicLayerRef.current; // We will add new markers here
 
-        if (zoomLevel < 11) return; // Opt-out for performance at low zoom
+        const currentMarkers = trainMarkersRef.current;
+        const activeTrainIds = new Set(trains.map(t => t.id));
 
-        const myRenderer = L.canvas({ padding: 0.5 });
+        // 1. Update or Create Markers
+        if (zoomLevel >= 11) {
+            trains.forEach(train => {
+                let marker = currentMarkers.get(train.id);
 
-        trains.forEach(train => {
-            const line = SUBWAY_LINES.find(l => l.id === train.lineId);
-            const color = line?.color || "#000";
+                if (!marker) {
+                    // Create New Marker
+                    // Visual: 🚆 Emoji or simple DIV
+                    const line = SUBWAY_LINES.find(l => l.id === train.lineId);
+                    const color = line?.color || "#000";
 
-            const trainMarker = L.circleMarker([train.lat, train.lng], {
-                radius: 6,
-                color: "#fff",
-                weight: 2,
-                fillColor: color,
-                fillOpacity: 1,
-                renderer: myRenderer,
-                interactive: false
+                    const icon = L.divIcon({
+                        className: 'train-marker-container',
+                        html: `<div class="train-marker" style="color: ${color};">🚆</div>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+
+                    marker = L.marker([train.lat, train.lng], {
+                        icon: icon,
+                        interactive: false
+                    });
+
+                    // Add tooltip
+                    marker.bindTooltip(`${train.lineName} (${train.headingTo})`, {
+                        direction: 'top',
+                        offset: [0, -10],
+                        className: 'train-label',
+                        permanent: false
+                    });
+
+                    marker.addTo(layerGroup);
+                    currentMarkers.set(train.id, marker);
+                } else {
+                    // Update Position
+                    // Leaflet handles smooth transition if CSS transition is set on the element?
+                    // Or just setLatLng is enough.
+                    marker.setLatLng([train.lat, train.lng]);
+
+                    // Update Tooltip content if needed (heading changes)
+                    const tooltip = marker.getTooltip();
+                    if (tooltip) {
+                        tooltip.setContent(`${train.lineName} (${train.headingTo})`);
+                    }
+                }
             });
+        }
 
-            if (zoomLevel >= 13) {
-                trainMarker.bindTooltip(`${train.lineName} (${train.headingTo})`, {
-                    direction: 'top',
-                    offset: [0, -6],
-                    className: 'train-label',
-                    permanent: false // Hovers only for performance
-                });
+        // 2. Remove Stale Markers (Trains that disappeared)
+        // Also remove ALL markers if zoom is too low
+        currentMarkers.forEach((marker, id) => {
+            if (!activeTrainIds.has(id) || zoomLevel < 11) {
+                marker.remove();
+                currentMarkers.delete(id);
             }
-
-            layerGroup.addLayer(trainMarker);
         });
+
     }, [trains, zoomLevel]);
 
     return null;
