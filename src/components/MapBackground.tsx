@@ -13,25 +13,21 @@ const TileLayer = dynamic(
     () => import("react-leaflet").then((mod) => mod.TileLayer),
     { ssr: false }
 );
-const Polyline = dynamic(
-    () => import("react-leaflet").then((mod) => mod.Polyline),
-    { ssr: false }
-);
-const CircleMarker = dynamic(
-    () => import("react-leaflet").then((mod) => mod.CircleMarker),
-    { ssr: false }
-);
-const Tooltip = dynamic(
-    () => import("react-leaflet").then((mod) => mod.Tooltip),
-    { ssr: false }
-);
+
 
 const ZoomHandler = dynamic(
     () => import("./ZoomHandler"),
     { ssr: false }
 );
 
+const SubwayCanvasLayer = dynamic(
+    () => import("./SubwayCanvasLayer"),
+    { ssr: false }
+);
+
 import { findShortestPath, PathResult } from "@/utils/pathfinding";
+import { useRealtimeTrains } from "@/hooks/useRealtimeTrains";
+
 
 // ... existing imports ...
 
@@ -39,6 +35,10 @@ function MapBackground() {
     const [isClient, setIsClient] = useState(false);
     const [stations, setStations] = useState<Station[]>([]);
     const [zoomLevel, setZoomLevel] = useState(12);
+    const [isDarkMode, setIsDarkMode] = useState(false);
+
+    // Real-time trains
+    const trains = useRealtimeTrains();
 
     // Pathfinding state
     const [startStation, setStartStation] = useState<string | null>(null);
@@ -81,15 +81,7 @@ function MapBackground() {
         setPathResult(null);
     };
 
-    // Helper to get coordinates for path visualization
-    const getPathCoordinates = (): [number, number][] => {
-        if (!pathResult) return [];
-        const coords = pathResult.path.map(name => {
-            const s = stations.find(st => st.name === name);
-            return s ? [s.lat, s.lng] : [0, 0];
-        }).filter(coord => coord[0] !== 0);
-        return coords as [number, number][];
-    };
+
 
     if (!isClient) {
         // ... existing loading state ...
@@ -148,113 +140,48 @@ function MapBackground() {
                 </div>
             )}
 
+            {/* Dark Mode Toggle */}
+            <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="absolute top-4 right-4 z-[1000] bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+                title={isDarkMode ? "라이트 모드로 전환" : "다크 모드로 전환"}
+            >
+                {isDarkMode ? "☀️" : "🌙"}
+            </button>
+
             <MapContainer
                 center={[37.5665, 126.9780]}
                 zoom={12}
                 scrollWheelZoom={true}
                 zoomControl={false}
                 attributionControl={false}
+                preferCanvas={true}
                 style={{ height: "100%", width: "100%", background: "#f8f9fa" }}
             >
                 {/* Internal component to track zoom */}
                 <ZoomHandler onZoomChange={setZoomLevel} />
 
-                {/* CartoDB Positron - Clean grayscale basemap */}
+                {/* Base Map Tile Layer */}
                 <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                    url={isDarkMode
+                        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                    }
                 />
 
-                {/* Subway Lines - Polylines */}
-                {SUBWAY_LINES.map((line) => (
-                    <Polyline
-                        key={line.id}
-                        positions={line.stations.map((s) => [s.lat, s.lng])}
-                        pathOptions={{
-                            color: line.color,
-                            weight: 4,
-                            opacity: pathResult ? 0.3 : 0.85, // Dim when path is active
-                            lineCap: "round",
-                            lineJoin: "round",
-                        }}
-                    />
-                ))}
-
-                {/* Path Highlight */}
-                {pathResult && (
-                    <Polyline
-                        positions={getPathCoordinates()}
-                        pathOptions={{
-                            color: "#000", // Black border for contrast
-                            weight: 8,
-                            opacity: 0.5,
-                            lineCap: "round",
-                            lineJoin: "round",
-                        }}
-                    >
-                        <Polyline
-                            positions={getPathCoordinates()}
-                            pathOptions={{
-                                color: "#00ffcc", // Neon Cyan
-                                weight: 5,
-                                opacity: 1,
-                                lineCap: "round",
-                                lineJoin: "round",
-                            }}
-                        />
-                    </Polyline>
-                )}
-
-                {/* Station Markers - Circle markers */}
-                {stations.map((station, idx) => {
-                    // ... existing logic ...
-                    const primaryLine = SUBWAY_LINES.find(l => l.id === station.lines[0]);
-                    const color = primaryLine?.color || "#888";
-                    const isTransfer = station.lines.length > 1;
-
-                    const radius = zoomLevel < 12 ? (isTransfer ? 5 : 3) : (isTransfer ? 7 : 5);
-                    const weight = zoomLevel < 12 ? (isTransfer ? 2 : 1) : (isTransfer ? 3.5 : 3);
-
-                    const isSelected = startStation === station.name || endStation === station.name;
-                    const isInPath = pathResult?.path.includes(station.name);
-
-                    return (
-                        <CircleMarker
-                            key={`${station.name}-${idx}`}
-                            center={[station.lat, station.lng]}
-                            radius={isSelected ? 10 : radius}
-                            eventHandlers={{
-                                click: () => handleStationClick(station.name)
-                            }}
-                            pathOptions={{
-                                color: isSelected ? "#000" : (pathResult && !isInPath ? "#ddd" : color),
-                                fillColor: isSelected ? (startStation === station.name ? "#3b82f6" : "#ef4444") : "#fff",
-                                fillOpacity: 1,
-                                weight: isSelected ? 4 : weight,
-                            }}
-                        >
-                            {/* ... tooltip logic ... */}
-                            {(zoomLevel >= 13 || isSelected) && (
-                                <Tooltip
-                                    direction="top"
-                                    offset={[0, -8]}
-                                    permanent={true}
-                                    className="station-label"
-                                >
-                                    <span style={{
-                                        fontWeight: 600,
-                                        fontSize: '10px',
-                                        color: '#333',
-                                        textShadow: '0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff',
-                                        whiteSpace: 'nowrap',
-                                    }}>
-                                        {station.name}
-                                    </span>
-                                </Tooltip>
-                            )}
-                        </CircleMarker>
-                    );
-                })}
+                {/* Canvas Layer for optimum performance */}
+                <SubwayCanvasLayer
+                    stations={stations}
+                    zoomLevel={zoomLevel}
+                    startStation={startStation}
+                    endStation={endStation}
+                    pathResult={pathResult}
+                    trains={trains}
+                    onStationClick={handleStationClick}
+                    isDarkMode={isDarkMode}
+                />
             </MapContainer>
+
         </div >
     );
 }

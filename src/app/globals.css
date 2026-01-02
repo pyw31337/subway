@@ -31,3 +31,14 @@ body {
     border: none !important;
     box-shadow: none !important;
 }
+
+/* Train Label Styles */
+.train-label {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    font-size: 10px !important;
+    padding: 0 4px !important;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
