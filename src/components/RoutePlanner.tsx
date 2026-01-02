@@ -102,7 +102,7 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
     return (
         <div className="absolute bottom-0 left-0 w-full z-[1000] pointer-events-none flex flex-col justify-end">
             {/* Bottom Sheet Glassmorphism Container */}
-            <div className="pointer-events-auto w-full bg-white/80 backdrop-blur-2xl border-t border-white/20 shadow-[0_-10px_40px_-5px_rgba(0,0,0,0.1)] pb-8 pt-6 px-4 animate-in slide-in-from-bottom-20 fade-in duration-500">
+            <div className="pointer-events-auto w-full bg-white/90 backdrop-blur-2xl border-t border-gray-200 shadow-[0_-10px_40px_-5px_rgba(0,0,0,0.1)] pb-8 pt-6 px-4">
                 <div className="max-w-4xl mx-auto flex flex-row items-center justify-center gap-4 sm:gap-6 flex-wrap">
 
                     {inputs.map((input, index) => (
@@ -120,8 +120,8 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
                                     onChange={(e) => handleInputChange(input.id, e.target.value)}
                                     placeholder={input.placeholder}
                                     className={`w-36 sm:w-48 py-2 px-0 bg-transparent text-gray-900 font-black text-2xl outline-none placeholder:text-gray-300/50 transition-all duration-300 border-b-[3px] focus:w-48 sm:focus:w-64 ${input.id === 'start' ? 'border-green-500/50 focus:border-green-500 placeholder:text-green-800/10' :
-                                            input.id === 'end' ? 'border-red-500/50 focus:border-red-500 placeholder:text-red-800/10' :
-                                                'border-gray-300 focus:border-gray-500 placeholder:text-gray-400'
+                                        input.id === 'end' ? 'border-red-500/50 focus:border-red-500 placeholder:text-red-800/10' :
+                                            'border-gray-300 focus:border-gray-500 placeholder:text-gray-400'
                                         }`}
                                 />
 
