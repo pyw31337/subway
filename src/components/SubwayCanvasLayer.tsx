@@ -224,7 +224,19 @@ export default function SubwayCanvasLayer({
 
                     const iconHtml = `
                         <div class="train-marker" style="transform: ${transform}; transition: transform 0.3s ease-out;">
-                            <img src="/subway/train-icon.png" alt="" style="width: 28px; height: auto; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));" />
+                            <div style="
+                                width: 28px; 
+                                height: 28px; 
+                                background-color: ${color};
+                                -webkit-mask-image: url(/subway/train-icon.png);
+                                -webkit-mask-size: contain;
+                                -webkit-mask-repeat: no-repeat;
+                                -webkit-mask-position: center;
+                                mask-image: url(/subway/train-icon.png);
+                                mask-size: contain;
+                                mask-repeat: no-repeat;
+                                mask-position: center;
+                            "></div>
                         </div>
                     `;
 
