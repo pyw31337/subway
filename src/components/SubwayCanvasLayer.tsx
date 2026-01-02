@@ -222,61 +222,75 @@ export default function SubwayCanvasLayer({
             const isEnd = index === (pathResult?.path.length || 0) - 1;
             const isTransfer = s.lines.length > 1;
 
-            // Colors
-            let color = "#00E0C6"; // Default path node
-            if (isStart) color = "#3b82f6";
-            if (isEnd) color = "#ef4444";
-            if (!isStart && !isEnd && isTransfer) color = "#eab308"; // Transfer gold
+            // Determining Marker Style
+            let color = "#000"; // stroke
+            let fillColor = "#fff";
 
-            // Radius
-            const radius = (isStart || isEnd) ? 8 : (isTransfer ? 6 : 4);
+            if (isStart) {
+                color = "#16a34a"; // Green-600
+                fillColor = "#22c55e"; // Green-500
+            } else if (isEnd) {
+                color = "#dc2626"; // Red-600
+                fillColor = "#ef4444"; // Red-500
+            } else {
+                // Intermediate: Use Line Color for stroke, White for fill (Existing style)
+                const primaryLine = SUBWAY_LINES.find(l => l.name === s.lines[0]);
+                color = primaryLine?.color || "#888";
+                fillColor = "#fff";
+            }
+
+            const radius = (isStart || isEnd) ? 7 : 5;
+            const weight = (isStart || isEnd) ? 2 : 3;
 
             // 1. The Marker
             layerGroup.addLayer(L.circleMarker([s.lat, s.lng], {
                 radius: radius,
-                color: "#fff",
-                fillColor: color,
+                color: (isStart || isEnd) ? "#fff" : color, // White border for Start/End? No, standard is Stroke=Color.
+                // Re-read: "Start Green, End Red". Usually implies Solid Fill.
+                // Let's stick to what I planned: Green Fill, Dark Green Stroke.
+                color: (isStart || isEnd) ? "#fff" : color, // Actually white stroke looks good on colored fill
+                fillColor: fillColor,
                 fillOpacity: 1,
-                weight: 2,
+                weight: weight,
+                color: (isStart || isEnd) ? "#14532d" : color, // Dark stroke for start/end
                 renderer: myRenderer
             }));
 
             // 2. The Detailed Label
-            // Calclulate Arrival Time (Mock: 2 mins per stop)
             const now = new Date();
             const arrivalTime = new Date(now.getTime() + index * 2 * 60000);
             const timeStr = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            // Mock Transfer Info: Deterministic based on name
+            // Info Content - White Rounded, No Shadow
+            const timeInfo = `<div class="bg-white rounded-xl px-2 py-0.5 mt-1 border border-gray-300 text-xs font-extrabold text-black whitespace-nowrap leading-none">${timeStr}</div>`;
+
             const transferInfo = isTransfer && !isStart && !isEnd
-                ? `<div class='text-emerald-300 font-bold text-[10px] mt-0.5'>⚡ ${Math.floor(name.length / 2) + 1}-${name.length % 4 + 1}</div>`
+                ? `<div class="bg-white rounded-xl px-2 py-0.5 mt-0.5 border border-gray-300 text-xs font-extrabold text-black whitespace-nowrap leading-none">환승 5-1</div>`
                 : "";
 
-            // Should we show name + time? Yes.
-            const timeInfo = `<div class='text-gray-200 text-[10px]'>${timeStr} 도착</div>`;
+            // Name Style: Simple, dark text. "Existing style"
+            const nameHtml = `<span class="text-black font-bold text-sm leading-none" style="-webkit-text-stroke: 1px white; paint-order: stroke fill;">${name}</span>`;
 
             // HTML Content
             const labelHtml = `
-                <div class="flex flex-col items-center leading-tight drop-shadow-md">
-                    <span class="text-white font-bold text-sm" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">${name}</span>
-                    <div class="bg-black/80 backdrop-blur px-1.5 py-0.5 rounded text-center mt-1 border border-white/20">
-                        ${timeInfo}
-                        ${transferInfo}
-                    </div>
+                <div class="flex flex-col items-center leading-tight">
+                    ${nameHtml}
+                    ${timeInfo}
+                    ${transferInfo}
                 </div>
             `;
 
             const labelIcon = L.divIcon({
                 className: 'bg-transparent',
                 html: labelHtml,
-                iconSize: [100, 40],
-                iconAnchor: [50, -10] // Position above marker
+                iconSize: [100, 60],
+                iconAnchor: [50, -8] // Position nicely above
             });
 
             layerGroup.addLayer(L.marker([s.lat, s.lng], {
                 icon: labelIcon,
                 interactive: false,
-                zIndexOffset: 1000 // Force on top
+                zIndexOffset: 1000
             }));
         };
 
