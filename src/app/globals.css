@@ -63,8 +63,3 @@ body {
     transition: transform 1s linear;
     /* Smooth interpolation of Leaflet movement */
 }
-
-/* Fix: Force Leaflet container to be white instead of default gray */
-.leaflet-container {
-    background-color: #ffffff !important;
-}

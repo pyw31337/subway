@@ -1,87 +1,171 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, memo } from "react";
 import dynamic from "next/dynamic";
-import { useMap, useMapEvents, ScaleControl } from "react-leaflet";
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { SUBWAY_LINES, Station } from "@/data/subway-lines";
-import SubwayCanvasLayer from "./SubwayCanvasLayer";
-import { Train } from "@/hooks/useRealtimeTrains";
+import { SUBWAY_LINES, getAllStations, Station } from "@/data/subway-lines";
 
-// Dynamic import for MapContainer to avoid SSR issues
+// Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
     () => import("react-leaflet").then((mod) => mod.MapContainer),
     { ssr: false }
 );
+const TileLayer = dynamic(
+    () => import("react-leaflet").then((mod) => mod.TileLayer),
+    { ssr: false }
+);
 
-// Constants
-const SEOUL_CENTER: [number, number] = [37.5665, 126.9780];
-const SEOUL_BOUNDS: [[number, number], [number, number]] = [
-    [37.4, 126.7], // SouthWest
-    [37.7, 127.2]  // NorthEast
-];
 
-function ZoomHandler({ setZoomLevel }: { setZoomLevel: (zoom: number) => void }) {
-    const map = useMapEvents({
-        zoomend: () => {
-            setZoomLevel(map.getZoom());
-        },
-    });
-    return null;
-}
+const ZoomHandler = dynamic(
+    () => import("./ZoomHandler"),
+    { ssr: false }
+);
 
-interface MapBackgroundProps {
-    stations: Station[];
-    trains: Train[];
-    startStation: string | null;
-    endStation: string | null;
-    pathResult: { path: string[]; totalWeight: number; transferCount: number } | null;
-    setStartStation: (station: string | null) => void;
-    setEndStation: (station: string | null) => void;
-    isDarkMode?: boolean;
-}
+const SubwayCanvasLayer = dynamic(
+    () => import("./SubwayCanvasLayer"),
+    { ssr: false }
+);
 
-export default function MapBackground({
-    stations,
-    trains,
-    startStation,
-    endStation,
-    pathResult,
-    setStartStation,
-    setEndStation,
-    isDarkMode = false
-}: MapBackgroundProps) {
+import { findShortestPath, PathResult } from "@/utils/pathfinding";
+import { useRealtimeTrains } from "@/hooks/useRealtimeTrains";
+
+
+// ... existing imports ...
+
+function MapBackground() {
+    const [isClient, setIsClient] = useState(false);
+    const [stations, setStations] = useState<Station[]>([]);
     const [zoomLevel, setZoomLevel] = useState(12);
-    const containerRef = useRef<HTMLDivElement>(null);
+    const [isDarkMode, setIsDarkMode] = useState(false);
 
-    // Handle station click from CanvasLayer
+    // Real-time trains
+    const trains = useRealtimeTrains();
+
+    // Pathfinding state
+    const [startStation, setStartStation] = useState<string | null>(null);
+    const [endStation, setEndStation] = useState<string | null>(null);
+    const [pathResult, setPathResult] = useState<PathResult | null>(null);
+
+    useEffect(() => {
+        setIsClient(true);
+        setStations(getAllStations());
+    }, []);
+
+    // Calculate path when both selected
+    useEffect(() => {
+        if (startStation && endStation) {
+            const result = findShortestPath(startStation, endStation);
+            setPathResult(result);
+        } else {
+            setPathResult(null);
+        }
+    }, [startStation, endStation]);
+
     const handleStationClick = (name: string) => {
         if (!startStation) {
             setStartStation(name);
-        } else if (!endStation) {
-            if (startStation === name) return; // Ignore self
+        } else if (!endStation && name !== startStation) {
             setEndStation(name);
         } else {
-            // Reset
-            setStartStation(name);
-            setEndStation(null);
+            // Reset if full
+            if (endStation) {
+                setStartStation(name);
+                setEndStation(null);
+                setPathResult(null);
+            }
         }
     };
 
+    const resetPath = () => {
+        setStartStation(null);
+        setEndStation(null);
+        setPathResult(null);
+    };
+
+
+
+    if (!isClient) {
+        // ... existing loading state ...
+        return (
+            <div className="absolute inset-0 w-full h-full z-0 bg-gray-100 flex items-center justify-center">
+                <div className="text-gray-400 text-sm animate-pulse">지도 로딩 중...</div>
+            </div>
+        );
+    }
+
     return (
-        <div ref={containerRef} className="absolute inset-0 w-full h-full z-0 bg-white">
+        <div className="absolute inset-0 w-full h-full z-0">
+            <link
+                rel="stylesheet"
+                href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+                crossOrigin=""
+            />
+
+            {/* UI Overlay for Navigation */}
+            {(startStation || endStation) && (
+                <div className="absolute top-28 left-6 z-[1000] bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-gray-100 max-w-sm w-72 animate-in fade-in slide-in-from-left-4 duration-300">
+                    <h3 className="font-bold text-lg mb-3 text-gray-800 flex items-center gap-2">
+                        <span>🗺️</span> 길찾기
+                    </h3>
+                    <div className="space-y-3 mb-4">
+                        <div className="flex items-center text-sm p-2 bg-blue-50 rounded-lg">
+                            <span className="w-12 text-blue-500 font-semibold">출발</span>
+                            <span className="font-bold text-gray-700">{startStation || "선택해주세요"}</span>
+                        </div>
+                        <div className="flex items-center text-sm p-2 bg-red-50 rounded-lg">
+                            <span className="w-12 text-red-500 font-semibold">도착</span>
+                            <span className="font-bold text-gray-700">{endStation || "역을 선택하세요"}</span>
+                        </div>
+                    </div>
+
+                    {pathResult && (
+                        <div className="bg-gray-50/80 p-3 rounded-lg mb-3 text-sm border border-gray-100">
+                            <div className="flex justify-between mb-1">
+                                <span className="text-gray-500">총 정거장</span>
+                                <span className="font-bold text-gray-800">{pathResult.path.length}개</span>
+                            </div>
+                            <div className="flex justify-between mb-1">
+                                <span className="text-gray-500">환승</span>
+                                <span className="font-bold text-gray-800">{pathResult.transferCount}회</span>
+                            </div>
+                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
+                                <span className="text-xs text-gray-400">예상 소요</span>
+                                <span className="font-bold text-blue-600">{pathResult.totalWeight}분</span>
+                            </div>
+                        </div>
+                    )}
+
+                    <button
+                        onClick={resetPath}
+                        className="w-full py-2.5 px-4 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-all text-sm font-bold shadow-md hover:shadow-lg active:scale-95"
+                    >
+                        초기화
+                    </button>
+                </div>
+            )}
+
+            {/* Dark Mode Toggle Removed as per request */}
+
             <MapContainer
-                center={SEOUL_CENTER}
+                center={[37.5665, 126.9780]}
                 zoom={12}
-                className="w-full h-full outline-none"
+                scrollWheelZoom={true}
                 zoomControl={false}
-                minZoom={10}
-                maxZoom={18}
-                maxBounds={SEOUL_BOUNDS}
-                maxBoundsViscosity={1.0}
+                attributionControl={false}
+                preferCanvas={true}
+                style={{ height: "100%", width: "100%", background: "#f8f9fa" }}
             >
-                <ZoomHandler setZoomLevel={setZoomLevel} />
+                {/* Internal component to track zoom */}
+                <ZoomHandler onZoomChange={setZoomLevel} />
+
+                {/* Base Map Tile Layer */}
+                <TileLayer
+                    url={isDarkMode
+                        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                    }
+                />
+
+                {/* Canvas Layer for optimum performance */}
                 <SubwayCanvasLayer
                     stations={stations}
                     zoomLevel={zoomLevel}
@@ -92,69 +176,10 @@ export default function MapBackground({
                     onStationClick={handleStationClick}
                     isDarkMode={isDarkMode}
                 />
-
-                {/* Scale Control: Bottom Left */}
-                <ScaleControl position="bottomleft" imperial={false} />
             </MapContainer>
 
-            {/* Bottom Input UI */}
-            <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-[1000] w-full max-w-md px-4">
-                <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-4 border-2 border-gray-100 ring-1 ring-black/5 flex flex-col gap-3">
-                    {/* Inputs */}
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center shadow-sm shrink-0">
-                            <span className="text-white text-xs font-bold">출발</span>
-                        </div>
-                        <div
-                            className={`flex-1 h-12 rounded-xl border-2 px-4 flex items-center bg-gray-50/50 transition-all ${startStation ? 'border-green-500 bg-green-50/30 text-gray-900 font-bold' : 'border-gray-200 text-gray-400'}`}
-                        >
-                            {startStation || "지도에서 역 선택"}
-                        </div>
-                        {startStation && (
-                            <button onClick={() => setStartStation(null)} className="p-2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center shadow-sm shrink-0">
-                            <span className="text-white text-xs font-bold">도착</span>
-                        </div>
-                        <div
-                            className={`flex-1 h-12 rounded-xl border-2 px-4 flex items-center bg-gray-50/50 transition-all ${endStation ? 'border-red-500 bg-red-50/30 text-gray-900 font-bold' : 'border-gray-200 text-gray-400'}`}
-                        >
-                            {endStation || "지도에서 역 선택"}
-                        </div>
-                        {endStation && (
-                            <button onClick={() => setEndStation(null)} className="p-2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Result Summary */}
-                    {pathResult && (
-                        <div className="mt-2 pt-3 border-t border-gray-100 flex items-center justify-between text-sm animate-in fade-in slide-in-from-top-2 duration-300">
-                            <div className="flex items-center gap-5">
-                                <div>
-                                    <span className="text-gray-500 block text-[10px] font-bold uppercase tracking-wider mb-0.5">Time</span>
-                                    <span className="font-black text-2xl text-gray-900">{pathResult.totalWeight}<span className="text-sm font-medium text-gray-500 ml-1">min</span></span>
-                                </div>
-                                <div className="h-8 w-px bg-gray-200"></div>
-                                <div>
-                                    <span className="text-gray-500 block text-[10px] font-bold uppercase tracking-wider mb-0.5">Transfer</span>
-                                    <span className="font-black text-xl text-gray-900">{pathResult.transferCount}<span className="text-sm font-medium text-gray-500 ml-1">times</span></span>
-                                </div>
-                            </div>
-                            <div className="flex items-center">
-                                <span className="text-white font-bold text-xs bg-black px-3 py-1.5 rounded-full shadow-lg">Fastest Route</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-        </div>
+        </div >
     );
 }
+
+export default memo(MapBackground);
