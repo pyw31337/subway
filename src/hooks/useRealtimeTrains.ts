@@ -9,6 +9,7 @@ export interface Train {
     lat: number;
     lng: number;
     headingTo: string; // Station name
+    angle: number; // Math angle in degrees (0 = East)
 }
 
 // Helper to interpolate position between two stations
@@ -86,6 +87,13 @@ export function useRealtimeTrains() {
 
                 const pos = interpolate(currentStation, nextStation, t.progress);
 
+                // Calculate Angle (Math degrees: 0=East, 90=North)
+                // y is lat, x is lng. 
+                const dy = nextStation.lat - currentStation.lat;
+                const dx = nextStation.lng - currentStation.lng;
+                let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                // Result is -180 to 180.
+
                 return {
                     id: t.id,
                     lineId: t.lineId,
@@ -93,7 +101,8 @@ export function useRealtimeTrains() {
                     status: 'RUNNING',
                     lat: pos.lat,
                     lng: pos.lng,
-                    headingTo: nextStation.name
+                    headingTo: nextStation.name,
+                    angle: angle
                 };
             });
 
