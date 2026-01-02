@@ -224,7 +224,7 @@ export default function SubwayCanvasLayer({
 
                     const iconHtml = `
                         <div class="train-marker" style="transform: ${transform}; transition: transform 0.3s ease-out;">
-                            <img src="/train-icon.png" alt="train" style="width: 28px; height: auto; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));" />
+                            <img src="/subway/train-icon.png" alt="" style="width: 28px; height: auto; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));" />
                         </div>
                     `;
 
