@@ -328,8 +328,10 @@ export default function SubwayCanvasLayer({
                 ? `<div class="bg-white rounded-xl px-2 py-0.5 mt-0.5 border border-gray-300 text-xs font-extrabold text-black whitespace-nowrap leading-none">환승 5-1</div>`
                 : "";
 
-            // Name Style: Simple, dark text. "Existing style"
-            const nameHtml = `<span class="text-black font-bold text-sm leading-none" style="-webkit-text-stroke: 1px white; paint-order: stroke fill;">${name}</span>`;
+            // Name Style: Enhanced (User Request: +2pt, Bolder)
+            // text-sm (14px) -> text-lg (18px)
+            // font-boldEx -> font-extrabold (800)
+            const nameHtml = `<span class="text-black font-extrabold text-lg leading-none" style="-webkit-text-stroke: 1px white; paint-order: stroke fill;">${name}</span>`;
 
             // HTML Content
             const labelHtml = `
