@@ -51,39 +51,100 @@ export default function SubwayCanvasLayer({
         };
     }, [map]);
 
-    // 4. Helper: Determine active lines from path (Synchronous derivation)
-    // We use useMemo consistently to avoid race conditions with effects
-    const activeRouteLineIds = useMemo(() => {
-        if (!pathResult || !pathResult.path || pathResult.path.length < 2) {
-            return new Set<string>();
-        }
+    // 4. Helper: Determine active lines AND detailed segment info (Synchronous derivation)
+    // Returns: Map of LineID -> { direction: 1|-1, stationRange: [min, max], isBoardingLine: boolean }
+    interface LineSegment {
+        direction: 1 | -1;          // 1 (Ascending indices) or -1 (Descending)
+        startIdx: number;           // Index of start station on this line
+        endIdx: number;             // Index of end station on this line
+        boardingStations: number[]; // Indices of stations where we board/transfer onto this line
+    }
 
+    const { activeLineDetails, activeLineIds } = useMemo(() => {
+        const details = new Map<string, LineSegment>();
         const ids = new Set<string>();
 
-        // Iterate segments to find the connecting line
+        if (!pathResult || !pathResult.path || pathResult.path.length < 2) {
+            return { activeLineDetails: details, activeLineIds: ids };
+        }
+
+        // Helper to find line config and indices
+        const getLineInfo = (stationName: string, lineName: string) => {
+            // Find all matching line IDs for the name (Inner/Outer loops have same name different IDs)
+            // But for index calculation, we need the specific ID that connects them.
+            // Simplified: we iterate SUBWAY_LINES to find the one containing both stations?
+            // Actually, we do that in the loop below.
+            return SUBWAY_LINES.filter(l => l.name === lineName);
+        };
+
+        // Iterate segments
         for (let i = 0; i < pathResult.path.length - 1; i++) {
             const s1Name = pathResult.path[i];
             const s2Name = pathResult.path[i + 1];
 
-            // FIX: Skip self-loops (e.g., transfers represented as same node)
-            // This prevents "Line 1 -> Line 1" commonality checks which would activate ALL lines at a transfer station
-            if (s1Name === s2Name) continue;
+            if (s1Name === s2Name) continue; // Skip transfers (self-loops)
 
             const s1 = stations.find(s => s.name === s1Name);
             const s2 = stations.find(s => s.name === s2Name);
 
             if (s1 && s2) {
-                // Find common line(s)
-                const commonLines = s1.lines.filter(l => s2.lines.includes(l));
+                const commonLineNames = s1.lines.filter(l => s2.lines.includes(l));
 
-                commonLines.forEach(lName => {
-                    // CRITICAL FIX: Add ALL IDs matching this name (e.g. "2호선" -> Inner & Outer)
-                    const matchingLines = SUBWAY_LINES.filter(l => l.name === lName);
-                    matchingLines.forEach(l => ids.add(l.id));
+                commonLineNames.forEach(lName => {
+                    // Find the specific Line Object that contains both stations (to get indices)
+                    // If multiple (e.g. Line 2 Inner/Outer), check both.
+                    const candidates = SUBWAY_LINES.filter(l => l.name === lName);
+
+                    candidates.forEach(line => {
+                        const idx1 = line.stations.findIndex(s => s.name === s1Name);
+                        const idx2 = line.stations.findIndex(s => s.name === s2Name);
+
+                        if (idx1 !== -1 && idx2 !== -1) {
+                            // Valid connection on this specific Line ID
+                            ids.add(line.id);
+
+                            // Determine direction
+                            const direction = idx2 > idx1 ? 1 : -1;
+
+                            // Update or Create Segment Info
+                            const existing = details.get(line.id);
+
+                            // We merge ranges. 
+                            // Initial: [min, max] = [min(i1, i2), max(i1, i2)]?
+                            // No, for filtering "on path", we need the range covered by the path.
+                            // If path is A(10) -> B(12) -> C(15), range is [10, 15].
+                            // If path is C(15) -> B(12), range is [12, 15] but direction is -1.
+
+                            const min = Math.min(idx1, idx2);
+                            const max = Math.max(idx1, idx2);
+
+                            if (!existing) {
+                                details.set(line.id, {
+                                    direction,
+                                    startIdx: min,
+                                    endIdx: max,
+                                    boardingStations: [idx1] // We board at s1
+                                });
+                            } else {
+                                // Extend range
+                                existing.startIdx = Math.min(existing.startIdx, min);
+                                existing.endIdx = Math.max(existing.endIdx, max);
+                                // If this segment starts a new leg (e.g. transfer), add boarding?
+                                // Actually active path segments are continuous per line mostly.
+                                // But if we transfer A->B (Line1), then C->D (Line1 again?), possible.
+                                // For simple logic: add idx1 to boarding if it's a "boarding point".
+                                // Boarding point is s1 of a segment.
+                                // We'll filter duplicates later or just check proximity to any boarding station.
+                                if (!existing.boardingStations.includes(idx1)) {
+                                    existing.boardingStations.push(idx1);
+                                }
+                            }
+                        }
+                    });
                 });
             }
         }
-        return ids;
+        return { activeLineDetails: details, activeLineIds: ids };
     }, [pathResult, stations]);
 
     // 1. Static Layer: Draw Lines & Stations
@@ -123,19 +184,30 @@ export default function SubwayCanvasLayer({
         const zoomThreshold = 13;
 
         stations.forEach((station) => {
+            // Find if this station is on an active line
+            const isOnActiveLine = station.lines.some(lName => {
+                // Determine if this line name corresponds to any active line ID
+                // Simplified: Just use activeLineDetails/Ids? 
+                // We only have activeLineIds (IDs). We need to map Name -> IDs.
+                // Just checking if any of its lines are in the active names set?
+                // Let's use the primary line logic for color.
+                return true;
+            });
+            // Actually, for station coloring, preserving the "Dark Gray" context is nice.
+
             const primaryLine = SUBWAY_LINES.find(l => l.name === station.lines[0]);
-            const isTransfer = station.lines.length > 1;
 
-            // Gray out stations if route active
-            const baseColor = primaryLine?.color || "#888";
-            const color = isRouteActive ? "#d1d5db" : baseColor;
+            let baseColor = primaryLine?.color || "#888";
+            if (isRouteActive) {
+                // If station is on an active line ID, make it dark gray?
+                // Or just keep simple dimming. User asked for "Dark Gray for rest of line".
+                // Let's dim all non-path stations to light gray for minimal noise.
+                baseColor = "#d1d5db";
+            }
 
-            // Should we hide non-path stations? User didn't say hide, just gray/dim.
-            // Let's keep them but dim.
-
-            let radius = isZoomOut ? (isTransfer ? 4 : 2) : (isTransfer ? 6 : 4);
-            let weight = isZoomOut ? (isTransfer ? 2 : 1) : (isTransfer ? 3 : 2);
-            // If inactive, maybe smaller?
+            // ... (Rest of station sizing logic is fine to keep simple)
+            let radius = isZoomOut ? (station.lines.length > 1 ? 4 : 2) : (station.lines.length > 1 ? 6 : 4);
+            let weight = isZoomOut ? (station.lines.length > 1 ? 2 : 1) : (station.lines.length > 1 ? 3 : 2);
             if (isRouteActive) {
                 radius = Math.max(2, radius - 1);
                 weight = 1;
@@ -143,9 +215,9 @@ export default function SubwayCanvasLayer({
 
             const marker = L.circleMarker([station.lat, station.lng], {
                 radius: radius,
-                color: color,
+                color: baseColor,
                 fillColor: "#fff",
-                fillOpacity: isRouteActive ? 0.5 : 1, // Dim fill too
+                fillOpacity: isRouteActive ? 0.5 : 1,
                 weight: weight,
                 renderer: myRenderer,
                 bubblingMouseEvents: false
@@ -153,7 +225,6 @@ export default function SubwayCanvasLayer({
 
             marker.on('click', () => onStationClick(station.name));
 
-            // Tooltips - Only show if zoomed in OR if it's a path station (optional logic, kept simple for now)
             if (zoomLevel >= zoomThreshold && !isRouteActive) {
                 marker.bindTooltip(station.name, {
                     permanent: true,
@@ -166,7 +237,7 @@ export default function SubwayCanvasLayer({
             layerGroup.addLayer(marker);
         });
 
-    }, [zoomLevel, stations, pathResult]); // Added pathResult dependency to trigger redraw
+    }, [zoomLevel, stations, pathResult, activeLineIds]);
 
     // 2. Highlight Layer: Selection & Path
     useEffect(() => {
@@ -307,83 +378,122 @@ export default function SubwayCanvasLayer({
         const layerGroup = dynamicLayerRef.current;
 
         const currentMarkers = trainMarkersRef.current;
-        const activeTrainIds = new Set(trains.map(t => t.id));
         const isRouteActive = !!pathResult;
 
         // 1. Update or Create Markers
         if (zoomLevel >= 11) {
             trains.forEach(train => {
-                // Optimization: Filter out trains if route active and train line is not relevant
+                let isVisible = true;
+
                 if (isRouteActive) {
-                    // Check if train.lineId is in activeRouteLineIds
-                    // Note: activeRouteLineIds is now a Set (memoized), not a ref
-                    if (!activeRouteLineIds.has(train.lineId)) {
-                        // Skip this train (it's effectively "removed" from view)
-                        return;
+                    // Strict Filtering Rule:
+                    // 1. Must be on activeLineIds
+                    // 2. Must match direction of travel
+                    // 3. Must be RELEVANT (On Path OR Arriving at Boarding Station)
+
+                    const segment = activeLineDetails.get(train.lineId);
+
+                    if (!segment) {
+                        isVisible = false;
+                    } else {
+                        // Direction Check
+                        if (train.direction !== segment.direction) {
+                            isVisible = false;
+                        } else {
+                            // Proximity/Range Check
+                            // 1. On Path: Index is between Start/End (inclusive)
+                            const min = Math.min(segment.startIdx, segment.endIdx);
+                            const max = Math.max(segment.startIdx, segment.endIdx);
+                            const onPath = train.stationIndex >= min && train.stationIndex <= max;
+
+                            // 2. Arriving at Boarding: Index is "before" a boarding station (approaching)
+                            // "Before" depends on direction.
+                            // If Dir=1 (Asc): Train < Boarding (e.g. at 5, boarding at 10. Dist=5)
+                            // If Dir=-1 (Desc): Train > Boarding (e.g. at 15, boarding at 10. Dist=5)
+                            let arriving = false;
+
+                            for (const boardIdx of segment.boardingStations) {
+                                const dist = (boardIdx - train.stationIndex) * segment.direction;
+                                // dist > 0 means approaching.
+                                // Let's show top 3... hard to sort inside a loop over single items.
+                                // Heuristic: Show if within 5 stations approaching?
+                                if (dist > 0 && dist <= 5) {
+                                    arriving = true;
+                                    break;
+                                }
+                            }
+
+                            if (!onPath && !arriving) {
+                                isVisible = false;
+                            }
+                        }
                     }
                 }
 
-                let marker = currentMarkers.get(train.id);
+                if (!isVisible) {
+                    // If marker exists, we'll remove it in cleanup loop logic (or just skip update here)
+                    // We need to ensure we don't 'update' a train that should be hidden
+                    return;
+                }
 
+                let marker = currentMarkers.get(train.id);
+                // ... (Marker creation logic same as before)
                 if (!marker) {
-                    // Create New Marker
                     const line = SUBWAY_LINES.find(l => l.id === train.lineId);
                     const color = line?.color || "#000";
-
-                    // Simple Train SVG (No drop shadow per request)
                     const svgIcon = `
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M4 6V17H20V6C20 6 20 4 12 4C4 4 4 6 4 6ZM4 17V19H20V17M6 10H9V13H6V10ZM15 10H18V13H15V10ZM6 19L5 21H7L8 19H16L17 21H19L18 19" fill="${color}" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
                         </svg>
                     `;
-
                     const icon = L.divIcon({
                         className: 'train-marker-container',
                         html: `<div class="train-marker">${svgIcon}</div>`,
                         iconSize: [24, 24],
                         iconAnchor: [12, 12]
                     });
-
                     marker = L.marker([train.lat, train.lng], {
                         icon: icon,
                         interactive: false
                     });
-
                     marker.bindTooltip(`${train.lineName} (${train.headingTo})`, {
-                        direction: 'top',
-                        offset: [0, -10],
-                        className: 'train-label',
-                        permanent: false
+                        direction: 'top', offset: [0, -10], className: 'train-label', permanent: false
                     });
-
                     marker.addTo(layerGroup);
                     currentMarkers.set(train.id, marker);
                 } else {
                     marker.setLatLng([train.lat, train.lng]);
-
-                    // Force update visibility if it was hidden?
-                    // Markers are removed if not in loop, so if it WAS hidden, it's not in the map.
-                    // If it IS in the map but shouldn't be, removing key is handled in step 2.
-                    if (!layerGroup.hasLayer(marker)) {
-                        marker.addTo(layerGroup);
-                    }
-
-                    const tooltip = marker.getTooltip();
-                    if (tooltip) {
-                        tooltip.setContent(`${train.lineName} (${train.headingTo})`);
-                    }
+                    if (!layerGroup.hasLayer(marker)) marker.addTo(layerGroup);
+                    marker.getTooltip()?.setContent(`${train.lineName} (${train.headingTo})`);
                 }
             });
         }
 
-        // 2. Remove Stale Markers (Trains that disappeared OR filtered out)
+        // 2. Remove Stale
         currentMarkers.forEach((marker, id) => {
             const train = trains.find(t => t.id === id);
-
             let shouldRemove = false;
-            if (!train) shouldRemove = true; // Train gone
-            else if (zoomLevel < 11) shouldRemove = true; // Zoom out
-            else if (isRouteActive && train && !activeRouteLineIds.has(train.lineId)) shouldRemove = true; // Filtered out
+            if (!train) shouldRemove = true;
+            else if (zoomLevel < 11) shouldRemove = true;
+            else if (isRouteActive && train) {
+                // Re-apply visibility check to remove existing ones that got filtered
+                const segment = activeLineDetails.get(train.lineId);
+                if (!segment) shouldRemove = true;
+                else {
+                    if (train.direction !== segment.direction) shouldRemove = true;
+                    else {
+                        const min = Math.min(segment.startIdx, segment.endIdx);
+                        const max = Math.max(segment.startIdx, segment.endIdx);
+                        const onPath = train.stationIndex >= min && train.stationIndex <= max;
+                        let arriving = false;
+                        for (const boardIdx of segment.boardingStations) {
+                            const dist = (boardIdx - train.stationIndex) * segment.direction;
+                            if (dist > 0 && dist <= 5) { arriving = true; break; }
+                        }
+                        if (!onPath && !arriving) shouldRemove = true;
+                    }
+                }
+            }
 
             if (shouldRemove) {
                 marker.remove();
@@ -391,23 +501,7 @@ export default function SubwayCanvasLayer({
             }
         });
 
-    }, [trains, zoomLevel, pathResult, activeRouteLineIds]); // Added activeRouteLineIds dependency
-
-    // Debug Overlay (Temporary)
-    // return (
-    //     <div className="absolute top-20 right-4 bg-black/80 text-white p-4 rounded z-[9999] text-xs font-mono whitespace-pre w-64">
-    //         <div>Active: {isRouteActive ? 'YES' : 'NO'}</div>
-    //         <div>IDs: {Array.from(activeRouteLineIds).join(', ')}</div>
-    //         <div>Total Trains: {trains.length}</div>
-    //     </div>
-    // );
-
-    // Actually, let's enable it so user sees it and we confirm the logic is running on client
-    // We will render it using a Portal or just return it if this component is mounted in map
-    // SubwayCanvasLayer is inside MapContainer, so returning a Div might be tricky if it expects Leaflet layers.
-    // React-Leaflet components usually return null.
-    // But we can return a standard valid JSX if we wrap it?
-    // MapContainer renders children. Normal divs overlay on map pane if styled absolute z-index.
+    }, [trains, zoomLevel, pathResult, activeLineDetails, activeLineIds]);
 
     return null;
 }

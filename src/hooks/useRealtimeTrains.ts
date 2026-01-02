@@ -9,6 +9,8 @@ export interface Train {
     lat: number;
     lng: number;
     headingTo: string; // Station name
+    direction: 1 | -1;
+    stationIndex: number;
 }
 
 // Helper to interpolate position between two stations
@@ -93,7 +95,9 @@ export function useRealtimeTrains() {
                     status: 'RUNNING',
                     lat: pos.lat,
                     lng: pos.lng,
-                    headingTo: nextStation.name
+                    headingTo: nextStation.name,
+                    direction: t.direction,
+                    stationIndex: t.stationIndex
                 };
             });
 
