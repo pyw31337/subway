@@ -65,6 +65,10 @@ export default function SubwayCanvasLayer({
             const s1Name = pathResult.path[i];
             const s2Name = pathResult.path[i + 1];
 
+            // FIX: Skip self-loops (e.g., transfers represented as same node)
+            // This prevents "Line 1 -> Line 1" commonality checks which would activate ALL lines at a transfer station
+            if (s1Name === s2Name) continue;
+
             const s1 = stations.find(s => s.name === s1Name);
             const s2 = stations.find(s => s.name === s2Name);
 
@@ -405,16 +409,5 @@ export default function SubwayCanvasLayer({
     // But we can return a standard valid JSX if we wrap it?
     // MapContainer renders children. Normal divs overlay on map pane if styled absolute z-index.
 
-    return (
-        <div className="leaflet-bottom leaflet-right" style={{ pointerEvents: 'none', zIndex: 9999 }}>
-            <div className="leaflet-control bg-black/70 text-green-400 p-2 m-4 rounded text-[10px] font-mono shadow-lg backdrop-blur pointer-events-auto">
-                <div className="font-bold border-b border-white/20 mb-1">DEBUG: Route Filter</div>
-                <div>Active Route: {pathResult ? "YES" : "NO"}</div>
-                <div className="my-1 text-white break-all max-w-[200px]">
-                    IDs: {activeRouteLineIds.size > 0 ? Array.from(activeRouteLineIds).join(", ") : "(Empty)"}
-                </div>
-                <div>Total Trains: {trains.length}</div>
-            </div>
-        </div>
-    );
+    return null;
 }
