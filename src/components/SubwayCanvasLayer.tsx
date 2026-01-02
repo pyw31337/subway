@@ -236,6 +236,7 @@ export default function SubwayCanvasLayer({
                                 mask-size: contain;
                                 mask-repeat: no-repeat;
                                 mask-position: center;
+                                filter: drop-shadow(0 0 1px white) drop-shadow(0 0 1px white);
                             "></div>
                         </div>
                     `;
