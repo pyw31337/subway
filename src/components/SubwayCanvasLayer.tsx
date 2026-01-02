@@ -5,6 +5,7 @@ import { useMap } from "react-leaflet";
 import L from 'leaflet';
 import { SUBWAY_LINES, Station } from "@/data/subway-lines";
 import { Train } from "@/hooks/useRealtimeTrains";
+import { getCatmullRomControlPoints, getPointOnCubicBezier, getTangentAngleOnCubicBezier } from "@/utils/bezier";
 
 interface SubwayCanvasLayerProps {
     stations: Station[];
@@ -51,6 +52,38 @@ export default function SubwayCanvasLayer({
         };
     }, [map]);
 
+    // Curve Lookup Map: "StationA|StationB" -> [CP1, CP2]
+    const curveMapRef = useRef<Map<string, [L.Point, L.Point]>>(new Map());
+
+    // 0. Pre-calculate Curves (Catmull-Rom to Cubic Bezier)
+    useEffect(() => {
+        const curveMap = new Map<string, [L.Point, L.Point]>();
+
+        SUBWAY_LINES.forEach((line) => {
+            const stations = line.stations;
+            for (let i = 0; i < stations.length - 1; i++) {
+                const p0 = stations[Math.max(0, i - 1)];
+                const p1 = stations[i];
+                const p2 = stations[i + 1];
+                const p3 = stations[Math.min(stations.length - 1, i + 2)];
+
+                // We use Lat/Lng directly as x/y for the math. 
+                const pt0 = { x: p0.lat, y: p0.lng };
+                const pt1 = { x: p1.lat, y: p1.lng };
+                const pt2 = { x: p2.lat, y: p2.lng };
+                const pt3 = { x: p3.lat, y: p3.lng };
+
+                const [cp1, cp2] = getCatmullRomControlPoints(pt0, pt1, pt2, pt3, 0.5);
+
+                curveMap.set(`${p1.name}|${p2.name}`, [
+                    new L.Point(cp1.x, cp1.y),
+                    new L.Point(cp2.x, cp2.y)
+                ]);
+            }
+        });
+        curveMapRef.current = curveMap;
+    }, [stations]);
+
     // 1. Static Layer: Draw Lines & Stations
     // Only redraw if ZOOM changes (for marker size) or Theme changes
     // Assuming 'stations' prop remains stable reference ideally, or check length
@@ -62,19 +95,40 @@ export default function SubwayCanvasLayer({
         // Canvas renderer for performance
         const myRenderer = L.canvas({ padding: 0.5 });
 
-        // Draw Lines
+        // Draw Bezier Lines
         SUBWAY_LINES.forEach((line) => {
-            const latlngs = line.stations.map(s => [s.lat, s.lng] as [number, number]);
+            const pathPoints: [number, number][] = [];
 
-            // Dim lines if path is active is handled by highlight layer overlay?
-            // Or we can just keep them opaque. Let's keep them somewhat consistent.
-            // Note: If we want to dim them dynamically without clearing everything, it's tricky.
-            // For OOM prevention, we prioritize NOT clearing this layer.
-            // We will handle dimming via CSS or just overlaying a semi-transparent 'fog' if needed, OR 
-            // accept that we don't dim the base lines for now to save memory.
-            // Let's keep them standard opacity.
+            for (let i = 0; i < line.stations.length - 1; i++) {
+                const s1 = line.stations[i];
+                const s2 = line.stations[i + 1];
+                const key = `${s1.name}|${s2.name}`;
+                const cps = curveMapRef.current.get(key);
 
-            const polyline = L.polyline(latlngs, {
+                if (cps) {
+                    const [cp1, cp2] = cps;
+                    // Refine curve into segments
+                    const SEGMENTS = 15; // Smoothness
+                    for (let j = 0; j <= SEGMENTS; j++) {
+                        const t = j / SEGMENTS;
+                        // Cubic Bezier interpolation in LatLng space
+                        const pt = getPointOnCubicBezier(
+                            { x: s1.lat, y: s1.lng },
+                            { x: cp1.x, y: cp1.y },
+                            { x: cp2.x, y: cp2.y },
+                            { x: s2.lat, y: s2.lng },
+                            t
+                        );
+                        pathPoints.push([pt.x, pt.y]);
+                    }
+                } else {
+                    // Fallback to straight line
+                    pathPoints.push([s1.lat, s1.lng]);
+                    pathPoints.push([s2.lat, s2.lng]);
+                }
+            }
+
+            const polyline = L.polyline(pathPoints, {
                 color: line.color,
                 weight: 4,
                 opacity: 0.85,
@@ -139,16 +193,55 @@ export default function SubwayCanvasLayer({
 
         const myRenderer = L.canvas({ padding: 0.5 });
 
-        // Draw Path Line
+        // Draw Path Line with Curves
         if (pathResult) {
-            const pathCoords = pathResult.path.map((name) => {
-                const s = stations.find((st) => st.name === name);
-                return s ? [s.lat, s.lng] as [number, number] : null;
-            }).filter((c): c is [number, number] => c !== null);
+            const refinedPath: [number, number][] = [];
 
-            if (pathCoords.length > 0) {
+            for (let i = 0; i < pathResult.path.length - 1; i++) {
+                const sname1 = pathResult.path[i];
+                const sname2 = pathResult.path[i + 1];
+
+                const s1 = stations.find(s => s.name === sname1);
+                const s2 = stations.find(s => s.name === sname2);
+
+                if (s1 && s2) {
+                    let cps = curveMapRef.current.get(`${sname1}|${sname2}`);
+                    let isReverse = false;
+
+                    if (!cps) {
+                        cps = curveMapRef.current.get(`${sname2}|${sname1}`);
+                        isReverse = true;
+                    }
+
+                    if (cps) {
+                        const [cp1, cp2] = cps;
+                        const SEGMENTS = 15;
+                        for (let j = 0; j <= SEGMENTS; j++) {
+                            // If Reverse (B->A), we iterate j=0..1. 
+                            // Curve is A->B. P1=A, P2=B.
+                            // We want to generate points from B to A.
+                            // So t should go from 1 to 0.
+                            const t = isReverse ? 1 - (j / SEGMENTS) : j / SEGMENTS;
+
+                            const pt = getPointOnCubicBezier(
+                                { x: s1.lat, y: s1.lng }, // Line Start (P1)
+                                { x: cp1.x, y: cp1.y },
+                                { x: cp2.x, y: cp2.y },
+                                { x: s2.lat, y: s2.lng }, // Line End (P2)
+                                t
+                            );
+                            refinedPath.push([pt.x, pt.y]);
+                        }
+                    } else {
+                        refinedPath.push([s1.lat, s1.lng]);
+                        refinedPath.push([s2.lat, s2.lng]);
+                    }
+                }
+            }
+
+            if (refinedPath.length > 0) {
                 // Neon Glow
-                layerGroup.addLayer(L.polyline(pathCoords, {
+                layerGroup.addLayer(L.polyline(refinedPath, {
                     color: "#00ffcc",
                     weight: 6,
                     opacity: 1,
