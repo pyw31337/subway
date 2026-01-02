@@ -100,9 +100,21 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
     };
 
     return (
-        <div className="absolute bottom-0 left-0 w-full z-[1000] pointer-events-none flex flex-col justify-end">
+        <div
+            className="absolute bottom-0 left-0 w-full z-[1000] pointer-events-none flex flex-col justify-end"
+            style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', zIndex: 1000 }}
+        >
             {/* Bottom Sheet Glassmorphism Container */}
-            <div className="pointer-events-auto w-full bg-white/90 backdrop-blur-2xl border-t border-gray-200 shadow-[0_-10px_40px_-5px_rgba(0,0,0,0.1)] pb-8 pt-6 px-4">
+            <div
+                className="pointer-events-auto w-full bg-white/90 backdrop-blur-2xl border-t border-gray-200 shadow-[0_-10px_40px_-5px_rgba(0,0,0,0.1)] pb-8 pt-6 px-4"
+                style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    paddingBottom: '2rem',
+                    paddingTop: '1.5rem',
+                    backdropFilter: 'blur(40px)',
+                    borderTop: '1px solid rgba(229, 231, 235, 0.5)'
+                }}
+            >
                 <div className="max-w-4xl mx-auto flex flex-row items-center justify-center gap-4 sm:gap-6 flex-wrap">
 
                     {inputs.map((input, index) => (
