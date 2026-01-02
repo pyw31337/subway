@@ -75,8 +75,9 @@ export default function SubwayCanvasLayer({
                 const commonLines = s1.lines.filter(l => s2.lines.includes(l));
 
                 commonLines.forEach(lName => {
-                    const lineConfig = SUBWAY_LINES.find(l => l.name === lName);
-                    if (lineConfig) ids.add(lineConfig.id);
+                    // CRITICAL FIX: Add ALL IDs matching this name (e.g. "2호선" -> Inner & Outer)
+                    const matchingLines = SUBWAY_LINES.filter(l => l.name === lName);
+                    matchingLines.forEach(l => ids.add(l.id));
                 });
             }
         }
@@ -212,35 +213,76 @@ export default function SubwayCanvasLayer({
 
         // Draw Selected Stations (Overlays)
         // ... (unchanged logic)
-        const drawHighlightMarker = (name: string, type: 'start' | 'end' | 'path') => {
+        // Draw Selected Stations & INFO LABELS
+        const drawPathStationInfo = (name: string, index: number) => {
             const s = stations.find(st => st.name === name);
             if (!s) return;
 
-            const color = type === 'start' ? "#3b82f6" : (type === 'end' ? "#ef4444" : "#00ffcc");
-            const radius = type === 'path' ? 5 : 8; // Start/End bigger
+            const isStart = index === 0;
+            const isEnd = index === (pathResult?.path.length || 0) - 1;
+            const isTransfer = s.lines.length > 1;
 
-            // Add tooltip for Start/End even if zoomed out
-            const marker = L.circleMarker([s.lat, s.lng], {
+            // Colors
+            let color = "#00E0C6"; // Default path node
+            if (isStart) color = "#3b82f6";
+            if (isEnd) color = "#ef4444";
+            if (!isStart && !isEnd && isTransfer) color = "#eab308"; // Transfer gold
+
+            // Radius
+            const radius = (isStart || isEnd) ? 8 : (isTransfer ? 6 : 4);
+
+            // 1. The Marker
+            layerGroup.addLayer(L.circleMarker([s.lat, s.lng], {
                 radius: radius,
-                color: "#000",
+                color: "#fff",
                 fillColor: color,
                 fillOpacity: 1,
-                weight: 3,
+                weight: 2,
                 renderer: myRenderer
-            }).addTo(layerGroup);
+            }));
 
-            if (type !== 'path') {
-                marker.bindTooltip(name, {
-                    permanent: true,
-                    className: "station-label font-bold text-lg z-50",
-                    direction: "top",
-                    offset: [0, -12]
-                });
-            }
+            // 2. The Detailed Label
+            // Calclulate Arrival Time (Mock: 2 mins per stop)
+            const now = new Date();
+            const arrivalTime = new Date(now.getTime() + index * 2 * 60000);
+            const timeStr = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            // Mock Transfer Info: Deterministic based on name
+            const transferInfo = isTransfer && !isStart && !isEnd
+                ? `<div class='text-emerald-300 font-bold text-[10px] mt-0.5'>⚡ ${Math.floor(name.length / 2) + 1}-${name.length % 4 + 1}</div>`
+                : "";
+
+            // Should we show name + time? Yes.
+            const timeInfo = `<div class='text-gray-200 text-[10px]'>${timeStr} 도착</div>`;
+
+            // HTML Content
+            const labelHtml = `
+                <div class="flex flex-col items-center leading-tight drop-shadow-md">
+                    <span class="text-white font-bold text-sm" style="text-shadow: 0 1px 4px rgba(0,0,0,0.8);">${name}</span>
+                    <div class="bg-black/80 backdrop-blur px-1.5 py-0.5 rounded text-center mt-1 border border-white/20">
+                        ${timeInfo}
+                        ${transferInfo}
+                    </div>
+                </div>
+            `;
+
+            const labelIcon = L.divIcon({
+                className: 'bg-transparent',
+                html: labelHtml,
+                iconSize: [100, 40],
+                iconAnchor: [50, -10] // Position above marker
+            });
+
+            layerGroup.addLayer(L.marker([s.lat, s.lng], {
+                icon: labelIcon,
+                interactive: false,
+                zIndexOffset: 1000 // Force on top
+            }));
         };
 
-        if (startStation) drawHighlightMarker(startStation, 'start');
-        if (endStation) drawHighlightMarker(endStation, 'end');
+        if (pathResult) {
+            pathResult.path.forEach((name, idx) => drawPathStationInfo(name, idx));
+        }
     }, [startStation, endStation, pathResult, stations]);
 
 
