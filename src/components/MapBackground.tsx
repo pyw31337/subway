@@ -2,7 +2,9 @@
 
 import { useEffect, useState, memo } from "react";
 import dynamic from "next/dynamic";
-import { SUBWAY_LINES, getAllStations, Station } from "@/data/subway-lines";
+import { getAllStations, Station } from "@/data/subway-lines";
+import { findShortestPath, PathResult } from "@/utils/pathfinding";
+import { useRealtimeTrains } from "@/hooks/useRealtimeTrains";
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
@@ -14,7 +16,6 @@ const TileLayer = dynamic(
     { ssr: false }
 );
 
-
 const ZoomHandler = dynamic(
     () => import("./ZoomHandler"),
     { ssr: false }
@@ -25,11 +26,11 @@ const SubwayCanvasLayer = dynamic(
     { ssr: false }
 );
 
-import { findShortestPath, PathResult } from "@/utils/pathfinding";
-import { useRealtimeTrains } from "@/hooks/useRealtimeTrains";
+const RoutePlanner = dynamic(
+    () => import("./RoutePlanner"),
+    { ssr: false }
+);
 
-
-// ... existing imports ...
 
 function MapBackground() {
     const [isClient, setIsClient] = useState(false);
@@ -50,41 +51,28 @@ function MapBackground() {
         setStations(getAllStations());
     }, []);
 
-    // Calculate path when both selected
-    useEffect(() => {
-        if (startStation && endStation) {
-            const result = findShortestPath(startStation, endStation);
-            setPathResult(result);
+    // Sync path result and markers from RoutePlanner
+    const handlePathFound = (result: PathResult | null) => {
+        setPathResult(result);
+        if (result && result.path.length > 0) {
+            setStartStation(result.path[0]);
+            setEndStation(result.path[result.path.length - 1]);
         } else {
-            setPathResult(null);
+            setStartStation(null);
+            setEndStation(null);
         }
-    }, [startStation, endStation]);
+    };
 
+    // Note: handleStationClick is kept for compatibility but might need integration with RoutePlanner
+    // Currently RoutePlanner drives the path finding.
     const handleStationClick = (name: string) => {
-        if (!startStation) {
-            setStartStation(name);
-        } else if (!endStation && name !== startStation) {
-            setEndStation(name);
-        } else {
-            // Reset if full
-            if (endStation) {
-                setStartStation(name);
-                setEndStation(null);
-                setPathResult(null);
-            }
-        }
+        // Optional: We could implement "Click map to fill empty input" here if we lifted state.
+        // For now, map click just highlights locally, but won't trigger pathfinding until RoutePlanner is updated.
+        // To avoid confusion, let's just log it or do nothing for now, as RoutePlanner is the UI source of truth.
+        console.log("Clicked station:", name);
     };
-
-    const resetPath = () => {
-        setStartStation(null);
-        setEndStation(null);
-        setPathResult(null);
-    };
-
-
 
     if (!isClient) {
-        // ... existing loading state ...
         return (
             <div className="absolute inset-0 w-full h-full z-0 bg-gray-100 flex items-center justify-center">
                 <div className="text-gray-400 text-sm animate-pulse">지도 로딩 중...</div>
@@ -100,50 +88,8 @@ function MapBackground() {
                 crossOrigin=""
             />
 
-            {/* UI Overlay for Navigation */}
-            {(startStation || endStation) && (
-                <div className="absolute top-28 left-6 z-[1000] bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-gray-100 max-w-sm w-72 animate-in fade-in slide-in-from-left-4 duration-300">
-                    <h3 className="font-bold text-lg mb-3 text-gray-800 flex items-center gap-2">
-                        <span>🗺️</span> 길찾기
-                    </h3>
-                    <div className="space-y-3 mb-4">
-                        <div className="flex items-center text-sm p-2 bg-blue-50 rounded-lg">
-                            <span className="w-12 text-blue-500 font-semibold">출발</span>
-                            <span className="font-bold text-gray-700">{startStation || "선택해주세요"}</span>
-                        </div>
-                        <div className="flex items-center text-sm p-2 bg-red-50 rounded-lg">
-                            <span className="w-12 text-red-500 font-semibold">도착</span>
-                            <span className="font-bold text-gray-700">{endStation || "역을 선택하세요"}</span>
-                        </div>
-                    </div>
-
-                    {pathResult && (
-                        <div className="bg-gray-50/80 p-3 rounded-lg mb-3 text-sm border border-gray-100">
-                            <div className="flex justify-between mb-1">
-                                <span className="text-gray-500">총 정거장</span>
-                                <span className="font-bold text-gray-800">{pathResult.path.length}개</span>
-                            </div>
-                            <div className="flex justify-between mb-1">
-                                <span className="text-gray-500">환승</span>
-                                <span className="font-bold text-gray-800">{pathResult.transferCount}회</span>
-                            </div>
-                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
-                                <span className="text-xs text-gray-400">예상 소요</span>
-                                <span className="font-bold text-blue-600">{pathResult.totalWeight}분</span>
-                            </div>
-                        </div>
-                    )}
-
-                    <button
-                        onClick={resetPath}
-                        className="w-full py-2.5 px-4 bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-all text-sm font-bold shadow-md hover:shadow-lg active:scale-95"
-                    >
-                        초기화
-                    </button>
-                </div>
-            )}
-
-            {/* Dark Mode Toggle Removed as per request */}
+            {/* Route Planner UI */}
+            <RoutePlanner onPathFound={handlePathFound} />
 
             <MapContainer
                 center={[37.5665, 126.9780]}
