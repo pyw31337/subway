@@ -201,15 +201,22 @@ export default function SubwayCanvasLayer({
 
                 if (!marker) {
                     // Create New Marker
-                    // Visual: 🚆 Emoji or simple DIV
+                    // Visual: SVG Icon for better consistency and styling
                     const line = SUBWAY_LINES.find(l => l.id === train.lineId);
                     const color = line?.color || "#000";
 
+                    // Simple Train SVG
+                    const svgIcon = `
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 6V17H20V6C20 6 20 4 12 4C4 4 4 6 4 6ZM4 17V19H20V17M6 10H9V13H6V10ZM15 10H18V13H15V10ZM6 19L5 21H7L8 19H16L17 21H19L18 19" fill="${color}" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+                        </svg>
+                    `;
+
                     const icon = L.divIcon({
                         className: 'train-marker-container',
-                        html: `<div class="train-marker" style="color: ${color};">🚆</div>`,
-                        iconSize: [20, 20],
-                        iconAnchor: [10, 10]
+                        html: `<div class="train-marker">${svgIcon}</div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
                     });
 
                     marker = L.marker([train.lat, train.lng], {
