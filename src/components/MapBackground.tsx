@@ -81,15 +81,14 @@ function MapBackground() {
     }
 
     return (
-        <div className="absolute inset-0 w-full h-full z-0 relative">
+        <div className="absolute inset-0 w-full h-full z-0">
             <link
                 rel="stylesheet"
                 href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
                 crossOrigin=""
             />
 
-            {/* Route Planner UI */}
-            <RoutePlanner onPathFound={handlePathFound} />
+            {/* Map Container First */}
 
             <MapContainer
                 center={[37.5665, 126.9780]}
@@ -123,6 +122,9 @@ function MapBackground() {
                     isDarkMode={isDarkMode}
                 />
             </MapContainer>
+
+            {/* Route Planner UI - Last element to ensure top stacking */}
+            <RoutePlanner onPathFound={handlePathFound} />
 
         </div >
     );
