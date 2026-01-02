@@ -93,7 +93,7 @@ function MapBackground() {
     }
 
     return (
-        <div className="absolute inset-0 w-full h-full z-0 relative">
+        <div className="absolute inset-0 w-full h-full z-0">
             <link
                 rel="stylesheet"
                 href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
