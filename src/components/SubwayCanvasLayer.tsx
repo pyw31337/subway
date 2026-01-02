@@ -109,7 +109,7 @@ export default function SubwayCanvasLayer({
         const zoomThreshold = 13;
 
         stations.forEach((station) => {
-            const primaryLine = SUBWAY_LINES.find(l => l.id === station.lines[0]);
+            const primaryLine = SUBWAY_LINES.find(l => l.name === station.lines[0]);
             const color = primaryLine?.color || "#888";
             const isTransfer = station.lines.length > 1;
 
