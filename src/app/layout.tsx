@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-    title: 'Seoul Subway Live',
+    title: 'Metro Live',
     description: 'Real-time GPS navigation for Seoul Subway',
 };
 
