@@ -52,19 +52,21 @@ const TimelineView = ({ segments, pathResult }: { segments: TimelineSegment[], p
     if (!segments || segments.length === 0) return null;
 
     return (
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full font-sans">
             {/* Header Summary */}
-            <div className="flex flex-col mb-6 pb-4 border-b border-gray-100 px-1">
-                <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-3xl font-black text-gray-900 tracking-tighter">{pathResult?.totalWeight}<span className="text-xl">분</span></span>
-                    <span className="text-blue-600 font-bold text-sm">최단시간</span>
+            <div className="flex flex-col mb-4 pb-4 border-b border-gray-100 px-1">
+                <div className="flex items-end gap-3 mb-2">
+                    <span className="text-[28px] font-black text-gray-900 leading-none tracking-tighter">
+                        {pathResult?.totalWeight}<span className="text-xl font-bold ml-0.5">분</span>
+                    </span>
+                    <span className="text-blue-600 font-bold text-sm mb-1">최단시간</span>
                 </div>
-                <div className="text-sm text-gray-500 font-medium">
-                    도착 {segments[segments.length - 1].endTime}
-                    <span className="mx-2 text-gray-300">|</span>
-                    환승 {pathResult?.transferCount}회
-                    <span className="mx-2 text-gray-300">|</span>
-                    카드 1,650원
+                <div className="text-sm text-gray-500 font-medium flex items-center gap-2">
+                    <span>도착 {segments[segments.length - 1].endTime}</span>
+                    <span className="w-[1px] h-3 bg-gray-300"></span>
+                    <span>환승 {pathResult?.transferCount}회</span>
+                    <span className="w-[1px] h-3 bg-gray-300"></span>
+                    <span>카드 1,650원</span>
                 </div>
             </div>
 
@@ -77,7 +79,7 @@ const TimelineView = ({ segments, pathResult }: { segments: TimelineSegment[], p
                     if (isWalk) {
                         // WALK / TRANSFER Segment
                         return (
-                            <div key={idx} className="flex relative pb-6 min-h-[80px]">
+                            <div key={idx} className="flex relative pb-4 min-h-[60px]">
                                 {/* Time Column */}
                                 <div className="w-[52px] text-xs text-gray-400 font-medium text-right pr-4 flex-shrink-0 pt-1">
                                     {segment.startTime}
@@ -86,20 +88,19 @@ const TimelineView = ({ segments, pathResult }: { segments: TimelineSegment[], p
                                 {/* Graphic Column */}
                                 <div className="relative flex flex-col items-center mr-0 w-4 flex-shrink-0">
                                     {/* Dotted Line */}
-                                    <div className="absolute top-3 bottom-[-24px] w-[2px] border-l-2 border-dotted border-gray-300 left-[50%] ml-[-1px]"></div>
+                                    <div className="absolute top-2 bottom-[-16px] w-[2px] border-l-2 border-dotted border-gray-300 left-[50%] ml-[-1px]"></div>
 
                                     {/* Walk Icon */}
                                     <div className="z-10 bg-white py-1">
-                                        <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7z" /></svg>
+                                        <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center">
+                                            <svg className="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7z" /></svg>
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Content Column */}
-                                <div className="flex-1 pl-5 pt-0.5">
-                                    <div className="text-sm text-gray-800 font-medium mb-1">
-                                        내리는 문: {segment.door || '확인필요'}
-                                    </div>
-                                    <div className="text-gray-500 text-xs">
+                                <div className="flex-1 pl-4 pt-1">
+                                    <div className="text-xs text-gray-500 font-medium">
                                         도보 {segment.duration}분 <span className="text-gray-300 mx-1">|</span> {segment.distance}m
                                     </div>
                                 </div>
@@ -107,12 +108,15 @@ const TimelineView = ({ segments, pathResult }: { segments: TimelineSegment[], p
                         );
                     } else {
                         // SUBWAY RIDE Segment
+                        // Determine line info for color
+                        const lineColor = segment.lineColor || '#999';
+
                         return (
-                            <div key={idx} className="flex relative pb-6 last:pb-0">
+                            <div key={idx} className="flex relative pb-8 last:pb-0">
                                 {/* Time Column */}
                                 <div className="w-[52px] flex flex-col justify-between text-right pr-4 flex-shrink-0">
-                                    <div className="text-xs text-gray-600 font-medium pt-1.5">{segment.startTime}</div>
-                                    {isLast && <div className="text-xs text-gray-600 font-medium mt-auto pb-0.5">{segment.endTime}</div>}
+                                    <div className="text-sm font-bold text-gray-900 leading-none">{segment.startTime}</div>
+                                    {isLast && <div className="text-sm font-bold text-gray-900 mt-auto leading-none">{segment.endTime}</div>}
                                 </div>
 
                                 {/* Graphic Column */}
@@ -120,75 +124,74 @@ const TimelineView = ({ segments, pathResult }: { segments: TimelineSegment[], p
                                     {/* Solid Line */}
                                     {!isLast && (
                                         <div
-                                            className="absolute top-3 bottom-[-24px] w-[4px] left-[50%] ml-[-2px]"
-                                            style={{ backgroundColor: segment.lineColor }}
+                                            className="absolute top-3 bottom-(-24px) w-[4px] left-[50%] ml-[-2px]"
+                                            style={{ backgroundColor: lineColor }}
                                         ></div>
                                     )}
 
-                                    {/* Start Node */}
+                                    {/* Start Node (White circle with colored border) */}
                                     <div
-                                        className="z-10 w-3 h-3 rounded-full bg-white ring-2 ring-white"
-                                        style={{ border: `3px solid ${segment.lineColor}` }}
+                                        className="z-10 w-[14px] h-[14px] rounded-full bg-white relative box-border"
+                                        style={{ border: `3px solid ${lineColor}` }}
                                     ></div>
 
                                     {/* End Node (only if last) */}
                                     {isLast && (
                                         <div
-                                            className="absolute bottom-0 z-10 w-3 h-3 rounded-full bg-white ring-2 ring-white"
-                                            style={{ border: `3px solid ${segment.lineColor}` }}
+                                            className="absolute bottom-0 z-10 w-[14px] h-[14px] rounded-full bg-white relative box-border"
+                                            style={{ border: `3px solid ${lineColor}` }}
                                         ></div>
                                     )}
                                 </div>
 
                                 {/* Content Column */}
-                                <div className={`flex-1 pl-5 ${isLast ? '' : 'pb-6'}`}>
+                                <div className={`flex-1 pl-4 ${isLast ? '' : 'pb-2'}`}>
                                     {/* Start Station Header */}
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                        <div
-                                            className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] text-white font-bold leading-none shadow-sm"
-                                            style={{ backgroundColor: segment.lineColor }}
-                                        >
-                                            {segment.lineName?.replace(/호선|선/g, '')}
-                                        </div>
-                                        <span className="text-base font-bold text-gray-900 leading-none">
+                                    <div className="flex items-center gap-2 -mt-1 mb-3">
+                                        <span className="text-lg font-black text-gray-900 leading-none tracking-tight">
                                             {segment.startStation}
                                         </span>
-                                        {segment.startStationCode && <span className="text-gray-400 text-sm font-medium">({segment.startStationCode})</span>}
+                                        {segment.startStationCode && <span className="text-gray-400 text-sm font-medium pt-0.5">({segment.startStationCode})</span>}
                                     </div>
 
                                     {/* Ride Details (If not just a single point) */}
                                     {!isLast && (
-                                        <div className="flex flex-col gap-2 mt-2">
-                                            <div className="text-sm text-gray-600">
-                                                {segment.nextStation} 방면 ({segment.headsign})
-                                            </div>
-                                            <div className="text-sm text-gray-600">
-                                                빠른환승 {segment.quickTransfer || '확인필요'}
+                                        <div className="flex flex-col gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-xs text-gray-500 font-medium">
+                                                    {segment.nextStation} 방면 ({segment.headsign})
+                                                </div>
                                             </div>
 
+                                            {/* Fast Transfer Badge */}
+                                            {segment.quickTransfer && (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="bg-gray-100 text-gray-500 text-[11px] font-bold px-2 py-0.5 rounded-full border border-gray-200">
+                                                        빠른환승 {segment.quickTransfer}
+                                                    </span>
+                                                    <span className="text-xs text-gray-400">
+                                                        {segment.door ? segment.door : '확인필요'}
+                                                    </span>
+                                                </div>
+                                            )}
+
                                             {/* Accordion Trigger (Mock) */}
-                                            <div className="inline-flex items-center gap-2 mt-1 px-0 py-1 text-gray-500 text-sm cursor-pointer hover:text-gray-700 transition-colors">
-                                                <span className="font-bold text-gray-900">{segment.duration}분</span>
-                                                <span className="text-gray-300">|</span>
-                                                <span>{segment.stationCount}개 역 이동</span>
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            <div className="inline-flex items-center gap-2 mt-1 px-3 py-1.5 bg-gray-50 rounded-lg w-fit cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100">
+                                                <span className="font-bold text-gray-700 text-sm">{segment.duration}분</span>
+                                                <span className="text-gray-300 text-xs">|</span>
+                                                <span className="text-gray-500 text-xs">{segment.stationCount}개 역 이동</span>
+                                                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                                             </div>
                                         </div>
                                     )}
 
                                     {/* End Station Header (If Last) */}
                                     {isLast && (
-                                        <div className="flex items-center gap-2 mt-8">
-                                            <div
-                                                className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] text-white font-bold leading-none shadow-sm"
-                                                style={{ backgroundColor: segment.lineColor }}
-                                            >
-                                                {segment.lineName?.replace(/호선|선/g, '')}
-                                            </div>
-                                            <span className="text-base font-bold text-gray-900 leading-none">
+                                        <div className="flex items-center gap-2 mt-[calc(100%-8px)] pt-1">
+                                            <span className="text-lg font-black text-gray-900 leading-none tracking-tight">
                                                 {segment.endStation}
                                             </span>
-                                            {segment.endStationCode && <span className="text-gray-400 text-sm font-medium">({segment.endStationCode})</span>}
+                                            {segment.endStationCode && <span className="text-gray-400 text-sm font-medium pt-0.5">({segment.endStationCode})</span>}
                                         </div>
                                     )}
                                 </div>
@@ -202,40 +205,80 @@ const TimelineView = ({ segments, pathResult }: { segments: TimelineSegment[], p
 };
 
 // --- SEARCH FORM COMPONENT (Now Top Level) ---
-const SearchForm = ({ inputs, handleInputChange, pathResult }: {
+const SearchForm = ({ inputs, handleInputChange, pathResult, onSwap }: {
     inputs: RouteInput[],
     handleInputChange: (id: string, val: string) => void,
-    pathResult: any
+    pathResult: any,
+    onSwap: () => void
 }) => (
-    <div className="flex flex-col gap-4">
-        {inputs.map((input) => (
-            <div key={input.id} className="relative group">
-                <div className={`absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${input.type === 'start' ? 'bg-green-500' :
-                    input.type === 'end' ? 'bg-red-500' : 'bg-gray-300'
-                    }`}></div>
+    <div className="bg-white rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.08)] border border-gray-100 p-4">
+        {/* Mock Tabs */}
+        <div className="flex items-center gap-4 mb-4 border-b border-gray-100 pb-2">
+            <button className="text-sm font-bold text-gray-900 border-b-2 border-black pb-2 -mb-2.5">대중교통</button>
+            <button className="text-sm font-medium text-gray-400 hover:text-gray-600 pb-2">자동차</button>
+            <button className="text-sm font-medium text-gray-400 hover:text-gray-600 pb-2">도보</button>
+            <button className="text-sm font-medium text-gray-400 hover:text-gray-600 pb-2">자전거</button>
+        </div>
+
+        {/* Input Area */}
+        <div className="flex flex-col gap-2 relative">
+            {/* Start Input */}
+            <div className="relative group">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 w-[6px] h-[6px] rounded-full ring-2 ring-green-500 bg-white"></div>
                 <input
                     type="text"
-                    value={input.value}
-                    onChange={(e) => handleInputChange(input.id, e.target.value)}
-                    placeholder={input.placeholder}
-                    className="w-full h-12 pl-10 pr-4 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:border-black focus:ring-1 focus:ring-black outline-none transition-all font-bold text-lg"
+                    value={inputs.find(i => i.id === 'start')?.value}
+                    onChange={(e) => handleInputChange('start', e.target.value)}
+                    placeholder="출발역 검색"
+                    className="w-full h-10 pl-8 pr-10 bg-gray-50 rounded-md border border-gray-200 focus:bg-white focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition-all text-[15px] font-medium placeholder-gray-400"
                 />
             </div>
-        ))}
 
-        {/* Desktop Search Button */}
-        <button
-            disabled={!pathResult}
-            className={`
-                w-full h-14 rounded-xl font-bold text-lg flex items-center justify-center gap-2
-                transition-all duration-300
-                ${pathResult
-                    ? 'bg-black text-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
-            `}
-        >
-            {pathResult ? '경로 안내 시작' : '역 이름을 입력하세요'}
-        </button>
+            {/* Swap Button (Absolute Centered) */}
+            <button
+                onClick={onSwap}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-gray-200 shadow-sm hover:bg-gray-50 z-10 transition-transform hover:rotate-180"
+                aria-label="출발/도착 전환"
+            >
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+            </button>
+
+            {/* End Input */}
+            <div className="relative group">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 w-[6px] h-[6px] rounded-full ring-2 ring-red-500 bg-white"></div>
+                <input
+                    type="text"
+                    value={inputs.find(i => i.id === 'end')?.value}
+                    onChange={(e) => handleInputChange('end', e.target.value)}
+                    placeholder="도착역 검색"
+                    className="w-full h-10 pl-8 pr-10 bg-gray-50 rounded-md border border-gray-200 focus:bg-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all text-[15px] font-medium placeholder-gray-400"
+                />
+            </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 mt-3">
+            <button className="flex-1 h-9 rounded-md border border-gray-200 bg-white text-gray-600 text-xs font-medium hover:bg-gray-50 flex items-center justify-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                다시입력
+            </button>
+            <button className="flex-1 h-9 rounded-md border border-gray-200 bg-white text-gray-600 text-xs font-medium hover:bg-gray-50 flex items-center justify-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                경유지
+            </button>
+            <button
+                disabled={!pathResult}
+                className={`
+                    w-24 h-9 rounded-md font-bold text-xs flex items-center justify-center
+                    transition-all duration-300
+                    ${pathResult
+                        ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
+                        : 'bg-gray-100 text-gray-300 cursor-not-allowed'}
+                `}
+            >
+                길찾기
+            </button>
+        </div>
     </div>
 );
 
@@ -404,6 +447,19 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
         ));
     };
 
+    const handleSwap = () => {
+        setInputs(prev => {
+            const start = prev.find(i => i.id === 'start');
+            const end = prev.find(i => i.id === 'end');
+            if (!start || !end) return prev;
+            return prev.map(input => {
+                if (input.id === 'start') return { ...input, value: end.value };
+                if (input.id === 'end') return { ...input, value: start.value };
+                return input;
+            });
+        });
+    };
+
     const handleSearchClick = () => {
         if (pathResult) {
             setIsDrawerOpen(!isDrawerOpen);
@@ -450,19 +506,26 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
             </div>
 
             {/* === DESKTOP LAYOUT (Left Sidebar) === */}
-            <div className="hidden md:flex flex-col fixed top-4 left-4 h-[calc(100vh-2rem)] w-[400px] z-[5000] bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
+            <div className="hidden md:flex flex-col fixed top-0 left-0 h-screen w-[400px] z-[5000] bg-white shadow-2xl border-r border-gray-200 overflow-hidden font-sans">
                 {/* Sidebar Header */}
-                <div className="p-6 pb-4 border-b border-gray-100/50 bg-white/50">
-                    <h1 className="text-2xl font-black italic tracking-tighter mb-6">
-                        Metro <span className="text-red-500">Live</span>
+                <div className="p-4 bg-white z-10 relative">
+                    <h1 className="text-2xl font-black italic tracking-tighter mb-4 px-2">
+                        Metro <span className="text-blue-600">Live</span>
                     </h1>
-                    <SearchForm inputs={inputs} handleInputChange={handleInputChange} pathResult={pathResult} />
+                    <SearchForm
+                        inputs={inputs}
+                        handleInputChange={handleInputChange}
+                        pathResult={pathResult}
+                        onSwap={handleSwap}
+                    />
                 </div>
 
                 {/* Sidebar Content (Scrollable) */}
-                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-gray-50/50">
                     {pathResult ? (
-                        <TimelineView segments={timelineData} pathResult={pathResult} />
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <TimelineView segments={timelineData} pathResult={pathResult} />
+                        </div>
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
                             <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
