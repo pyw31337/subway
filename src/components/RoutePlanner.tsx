@@ -25,16 +25,20 @@ interface TimelineSegment {
     lineName?: string;
     lineColor?: string;
     startStation: string;
+    startStationCode?: string; // e.g. "749"
     endStation: string;
+    endStationCode?: string; // e.g. "744"
     duration: number; // minutes
-    distance?: number; // meters (mock)
+    distance?: number; // meters (for walk)
     stationCount?: number; // for subway
     stations?: string[]; // list of stations in this ride
     startTime: string; // HH:MM
     endTime: string;   // HH:MM
     headsign?: string; // e.g. "장암행"
+    nextStation?: string; // e.g. "광명사거리역"
     door?: string;     // "오른쪽" | "왼쪽"
     quickTransfer?: string; // "8-4"
+    walkTime?: number; // For explicit walk segment
 }
 
 export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
@@ -58,15 +62,11 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
 
         const segments: TimelineSegment[] = [];
         let currentTime = new Date();
-        const startTimeStr = getRandomTime(currentTime, 0);
-
-        // We need to group stations by Line.
-        // Heuristic: Iterate stations, check if current and next share a line.
-        // If they share multiple, pick the one that continues the previous segment if possible, or just the first one.
+        // Start time: Now + 2 min bufffer
+        currentTime.setMinutes(currentTime.getMinutes() + 2);
 
         let currentSegment: Partial<TimelineSegment> | null = null;
 
-        // Helper to find common lines between s1, s2
         const getCommonLines = (s1Name: string, s2Name: string) => {
             const s1 = SUBWAY_LINES.flatMap(l => l.stations).find(s => s.name === s1Name);
             const s2 = SUBWAY_LINES.flatMap(l => l.stations).find(s => s.name === s2Name);
@@ -80,75 +80,51 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
             const s1 = path[i];
             const s2 = path[i + 1];
 
-            // 1. Determine connection type
+            // Determine if we are changing lines
             const commonLines = getCommonLines(s1, s2);
-            // In our simplifed graph, if commonLines exist, it's a ride. If not (transfer edge), it's a walk.
-            // But usually transfers happen AT a station node in real graphs, or between s1->s2 if simple graph.
-            // Our simple graph returns s1->s2 even for transfer if they are connected.
-            // Wait, our graph connects s1->s2 via lineId.
-            // Let's assume if commonLines.length > 0 it is a ride. 
-            // BUT: If the previous segment was Line A, and s1->s2 supports Line A and Line B, we stay on Line A.
-            // If they support ONLY Line B, we switched.
-
             let chosenLineName = commonLines[0];
-            let isTransfer = false;
 
-            if (currentSegment && currentSegment.type === 'SUBWAY') {
-                // Check if we can continue on current line
-                if (commonLines.includes(currentSegment.lineName!)) {
-                    chosenLineName = currentSegment.lineName!;
-                } else {
-                    isTransfer = true;
-                }
-            } else {
-                // First segment
+            // If current segment exists and we can continue on the same line, prioritize it.
+            if (currentSegment && currentSegment.lineName && commonLines.includes(currentSegment.lineName)) {
+                chosenLineName = currentSegment.lineName;
             }
 
-            // If it's a transfer (line switch), we inject a WALK segment first?
-            // "Transfer" usually means getting off at S1 and walking to S1(Line B).
-            // But our path is S1 -> S2.
-            // If we switch lines AT s1, s1 is the transfer point.
-
-            // Simplified Logic: 
-            // Just look at the line required for s1->s2.
-            // If it differs from previous segment's line, close previous, add walk, start new.
+            // Check for Transfer (Line Switch)
+            // A transfer occurs if we have a current valid segment, but the new chosen line is different.
+            // AND we are at the node where one ends and other begins (which is always true in this loop logic).
 
             if (currentSegment && currentSegment.lineName !== chosenLineName) {
-                // Finish current segment
+                // 1. Close current segment
                 segments.push(currentSegment as TimelineSegment);
 
-                // Add Transfer Walk
-                const walkDuration = 5; // mock 5 min walk
-                currentTime = new Date(currentTime.getTime() + walkDuration * 60000);
+                // 2. Add Walk/Transfer Segment
+                // Mock logic: 5 minutes walk
+                const walkDuration = 5;
+                const walkDistance = 276; // Random mock
+
+                // Walk starts when ride ends
+                const walkStartTime = currentSegment.endTime!;
+                const walkEndTimeDate = new Date(currentTime.getTime() + walkDuration * 60000);
+                const walkEndTime = walkEndTimeDate.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+                // Update master time
+                currentTime = walkEndTimeDate;
 
                 segments.push({
                     type: 'WALK',
-                    startStation: currentSegment.endStation!, // Walking within the station usually
-                    endStation: s1, // Actually we are AT s1. The transfer happens AT s1.
-                    // This is tricky visually. The timeline usually shows:
-                    // Station A (Line 1)
-                    //   |
-                    // Station B (Line 1) -> Transfer
-                    //   : (Walk)
-                    // Station B (Line 2)
-                    //   |
-                    // Station C (Line 2)
-
-                    // So we need a "Walk" segment distinct from the ride.
-                    // Let's just create a Walk segment that represents the transfer time AT s1.
-                    // But our path array is [A, B, C]. If A->B is Line 1, B->C is Line 2.
-                    // Transfer happens at B.
-
+                    startStation: currentSegment.endStation!,
+                    endStation: s1, // Technically we are still at s1 (the transfer station)
                     duration: walkDuration,
-                    distance: 200,
-                    startTime: getRandomTime(currentTime, -5), // Backtrack slightly for logic or just accumulate
-                    endTime: getRandomTime(currentTime, 0)
+                    distance: walkDistance,
+                    startTime: walkStartTime,
+                    endTime: walkEndTime,
+                    door: undefined // Walk segment doesn't need door info usually, or inherit from previous? Legacy logic used random.
                 });
 
                 currentSegment = null;
             }
 
-            // Start or Continue Segment
+            // 3. Start or Continue Subway Segment
             const travelTime = 2; // 2 min per station default
             currentTime = new Date(currentTime.getTime() + travelTime * 60000);
 
@@ -159,19 +135,23 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
                     lineName: chosenLineName,
                     lineColor: lineInfo?.color || '#999',
                     startStation: s1,
+                    startStationCode: undefined, // No data
                     endStation: s2,
+                    endStationCode: undefined, // No data
                     duration: travelTime,
                     stationCount: 1,
-                    stations: [s1, s2], // Start accumulating
-                    startTime: getRandomTime(currentTime, -2), // Start of this hop
+                    stations: [s1, s2],
+                    startTime: getRandomTime(new Date(currentTime.getTime() - travelTime * 60000), 0),
                     endTime: getRandomTime(currentTime, 0),
-                    headsign: `${path[path.length - 1]}행`, // Mock headsign
-                    door: Math.random() > 0.5 ? "오른쪽" : "왼쪽",
-                    quickTransfer: `${Math.floor(Math.random() * 8) + 1}-${Math.floor(Math.random() * 4) + 1}`
+                    headsign: `${path[path.length - 1]}행`,
+                    nextStation: s2,
+                    door: undefined,     // No data
+                    quickTransfer: undefined // No data
                 };
             } else {
                 // Extend
                 currentSegment.endStation = s2;
+                currentSegment.endStationCode = undefined;
                 currentSegment.duration! += travelTime;
                 currentSegment.stationCount! += 1;
                 currentSegment.stations!.push(s2);
@@ -266,16 +246,18 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
 
     // --- TIMELINE DISPLAY COMPONENT ---
     const TimelineView = ({ segments }: { segments: TimelineSegment[] }) => {
+        if (!segments || segments.length === 0) return null;
+
         return (
-            <div className="flex flex-col">
+            <div className="flex flex-col w-full">
                 {/* Header Summary */}
-                <div className="flex flex-col mb-6 pb-4 border-b border-gray-100">
+                <div className="flex flex-col mb-6 pb-4 border-b border-gray-100 px-1">
                     <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-3xl font-black text-gray-900">{pathResult?.totalWeight}분</span>
-                        <div className="bg-blue-100 text-blue-600 text-[10px] px-1.5 py-0.5 rounded font-bold">최단시간</div>
+                        <span className="text-3xl font-black text-gray-900 tracking-tighter">{pathResult?.totalWeight}<span className="text-xl">분</span></span>
+                        <span className="text-blue-600 font-bold text-sm">최단시간</span>
                     </div>
                     <div className="text-sm text-gray-500 font-medium">
-                        {segments.filter(s => s.type === 'SUBWAY').reduce((acc, s) => acc + (s.stationCount || 0), 0)}개역 이동
+                        도착 {segments[segments.length - 1].endTime}
                         <span className="mx-2 text-gray-300">|</span>
                         환승 {pathResult?.transferCount}회
                         <span className="mx-2 text-gray-300">|</span>
@@ -284,247 +266,235 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
                 </div>
 
                 {/* Timeline Items */}
-                <div className="relative pl-2">
+                <div className="relative pl-0">
                     {segments.map((segment, idx) => {
                         const isWalk = segment.type === 'WALK';
                         const isLast = idx === segments.length - 1;
 
-                        return (
-                            <div key={idx} className="flex relative pb-8 last:pb-0">
-                                {/* Time Column */}
-                                <div className="w-12 text-xs text-gray-400 pt-1 font-medium tabular-nums text-right pr-3 flex-shrink-0">
-                                    {segment.startTime}
-                                </div>
+                        if (isWalk) {
+                            // WALK / TRANSFER Segment
+                            return (
+                                <div key={idx} className="flex relative pb-6 min-h-[80px]">
+                                    {/* Time Column (Empty or specific walk time start) */}
+                                    <div className="w-[52px] text-xs text-gray-400 font-medium text-right pr-4 flex-shrink-0 pt-1">
+                                        {/* Walk start time is usually end of previous ride, but we can show it if needed */}
+                                        {segment.startTime}
+                                    </div>
 
-                                {/* Graphic Column */}
-                                <div className="relative flex flex-col items-center mr-4">
-                                    {/* Line Connector */}
-                                    {!isLast && (
-                                        <div
-                                            className={`absolute top-3 bottom-[-32px] w-[2px] ${isWalk ? 'border-l-2 border-dotted border-gray-300 left-[50%] ml-[-1px]' : 'left-[50%] ml-[-1px]'}`}
-                                            style={{ backgroundColor: isWalk ? 'transparent' : segment.lineColor }}
-                                        ></div>
-                                    )}
+                                    {/* Graphic Column */}
+                                    <div className="relative flex flex-col items-center mr-0 w-4 flex-shrink-0">
+                                        {/* Dotted Line */}
+                                        <div className="absolute top-3 bottom-[-24px] w-[2px] border-l-2 border-dotted border-gray-300 left-[50%] ml-[-1px]"></div>
 
-                                    {/* Node */}
-                                    <div
-                                        className={`z-10 w-3 h-3 rounded-full border-[2.5px] bg-white box-border`}
-                                        style={{
-                                            borderColor: isWalk ? '#d1d5db' : segment.lineColor,
-                                        }}
-                                    ></div>
-                                </div>
-
-                                {/* Content Column */}
-                                <div className="flex-1 pt-0.5">
-                                    {isWalk ? (
-                                        // Walk / Transfer Info
-                                        <div className="flex flex-col gap-1 mb-2">
-                                            <div className="flex items-center gap-1.5 text-gray-800 font-bold text-sm">
-                                                <span>🏃 도보 {segment.duration}분</span>
-                                                <span className="text-gray-400 font-normal text-xs">{segment.distance}m</span>
-                                            </div>
+                                        {/* Walk Icon */}
+                                        <div className="z-10 bg-white py-1">
+                                            <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24"><path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7z" /></svg>
                                         </div>
-                                    ) : (
-                                        // Subway Ride Info
-                                        <div className="flex flex-col">
-                                            {/* Start Station Name */}
-                                            <div className="flex items-center gap-2 mb-1">
+                                    </div>
+
+                                    {/* Content Column */}
+                                    <div className="flex-1 pl-5 pt-0.5">
+                                        <div className="text-sm text-gray-800 font-medium mb-1">
+                                            내리는 문: {segment.door || '확인필요'}
+                                        </div>
+                                        <div className="text-gray-500 text-xs">
+                                            도보 {segment.duration}분 <span className="text-gray-300 mx-1">|</span> {segment.distance}m
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        } else {
+                            // SUBWAY RIDE Segment
+                            return (
+                                <div key={idx} className="flex relative pb-6 last:pb-0">
+                                    {/* Time Column */}
+                                    <div className="w-[52px] flex flex-col justify-between text-right pr-4 flex-shrink-0">
+                                        <div className="text-xs text-gray-600 font-medium pt-1.5">{segment.startTime}</div>
+                                        {isLast && <div className="text-xs text-gray-600 font-medium mt-auto pb-0.5">{segment.endTime}</div>}
+                                    </div>
+
+                                    {/* Graphic Column */}
+                                    <div className="relative flex flex-col items-center mr-0 w-4 flex-shrink-0">
+                                        {/* Solid Line */}
+                                        {!isLast && (
+                                            <div
+                                                className="absolute top-3 bottom-[-24px] w-[4px] left-[50%] ml-[-2px]"
+                                                style={{ backgroundColor: segment.lineColor }}
+                                            ></div>
+                                        )}
+
+                                        {/* Start Node */}
+                                        <div
+                                            className="z-10 w-3 h-3 rounded-full bg-white ring-2 ring-white"
+                                            style={{ border: `3px solid ${segment.lineColor}` }}
+                                        ></div>
+
+                                        {/* End Node (only if last) */}
+                                        {isLast && (
+                                            <div
+                                                className="absolute bottom-0 z-10 w-3 h-3 rounded-full bg-white ring-2 ring-white"
+                                                style={{ border: `3px solid ${segment.lineColor}` }}
+                                            ></div>
+                                        )}
+                                    </div>
+
+                                    {/* Content Column */}
+                                    <div className={`flex-1 pl-5 ${isLast ? '' : 'pb-6'}`}>
+                                        {/* Start Station Header */}
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <div
+                                                className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] text-white font-bold leading-none shadow-sm"
+                                                style={{ backgroundColor: segment.lineColor }}
+                                            >
+                                                {segment.lineName?.replace(/호선|선/g, '')}
+                                            </div>
+                                            <span className="text-base font-bold text-gray-900 leading-none">
+                                                {segment.startStation}
+                                            </span>
+                                            {segment.startStationCode && <span className="text-gray-400 text-sm font-medium">({segment.startStationCode})</span>}
+                                        </div>
+
+                                        {/* Ride Details (If not just a single point) */}
+                                        {!isLast && (
+                                            <div className="flex flex-col gap-2 mt-2">
+                                                <div className="text-sm text-gray-600">
+                                                    {segment.nextStation} 방면 ({segment.headsign})
+                                                </div>
+                                                <div className="text-sm text-gray-600">
+                                                    빠른환승 {segment.quickTransfer || '확인필요'}
+                                                </div>
+
+                                                {/* Accordion Trigger (Mock) */}
+                                                <div className="inline-flex items-center gap-2 mt-1 px-0 py-1 text-gray-500 text-sm cursor-pointer hover:text-gray-700 transition-colors">
+                                                    <span className="font-bold text-gray-900">{segment.duration}분</span>
+                                                    <span className="text-gray-300">|</span>
+                                                    <span>{segment.stationCount}개 역 이동</span>
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* End Station Header (If Last) */}
+                                        {isLast && (
+                                            <div className="flex items-center gap-2 mt-8">
                                                 <div
-                                                    className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold"
+                                                    className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] text-white font-bold leading-none shadow-sm"
                                                     style={{ backgroundColor: segment.lineColor }}
                                                 >
-                                                    {segment.lineName?.replace('호선', '')}
+                                                    {segment.lineName?.replace(/호선|선/g, '')}
                                                 </div>
-                                                <span className="text-base font-extrabold text-gray-900 leading-none">
-                                                    {segment.startStation}
+                                                <span className="text-base font-bold text-gray-900 leading-none">
+                                                    {segment.endStation}
                                                 </span>
-                                                <span className="text-gray-400 text-xs font-normal">(749)</span>
+                                                {segment.endStationCode && <span className="text-gray-400 text-sm font-medium">({segment.endStationCode})</span>}
                                             </div>
-
-                                            {/* Headsign & Info */}
-                                            <div className="text-xs text-gray-500 mb-2 pl-7">
-                                                <p className="mb-0.5">{segment.headsign} 방면</p>
-                                                <p className="text-gray-800 font-semibold">빠른환승 {segment.quickTransfer}</p>
-                                            </div>
-
-                                            {/* Expanded Ride Details */}
-                                            <div className={`pl-7 mb-2`}>
-                                                <div className="inline-block bg-gray-50 hover:bg-gray-100 rounded-lg px-3 py-1.5 border border-gray-200 transition-colors cursor-pointer group">
-                                                    <div className="flex items-center gap-2 text-xs text-gray-600">
-                                                        <span className="font-bold">{segment.duration}분</span>
-                                                        <span className="w-[1px] h-2 bg-gray-300"></span>
-                                                        <span>{segment.stationCount}개 역 이동</span>
-                                                        <svg className="w-3 h-3 text-gray-400 group-hover:text-gray-600 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* End Station if Last */}
-                                            {idx === segments.length - 1 && (
-                                                <div className="flex items-center gap-2 mt-6">
-                                                    <div
-                                                        className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold"
-                                                        style={{ backgroundColor: segment.lineColor }}
-                                                    >
-                                                        {segment.lineName?.replace('호선', '')}
-                                                    </div>
-                                                    <span className="text-base font-extrabold text-gray-900 leading-none">
-                                                        {segment.endStation}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* End Time (Right side mostly or just implied) */}
-                                {idx === segments.length - 1 && (
-                                    <div className="absolute bottom-0 right-0 text-gray-400 text-xs">
-                                        도착 {segment.endTime}
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        );
+                                </div>
+                            );
+                        }
                     })}
-
-                    {/* Final Destination Marker (Replicated logic inside loop for flow, but need distinct node for very end) */}
-                    {/* Actually the loop above handles Start->(Run)->End for each segment. 
-                        We need to properly handle the connection.
-                        Visual Pattern:
-                        Time | O StartStation
-                             | |
-                             | | <Details>
-                             | |
-                        Time | O TransferStation (End of Seg 1, Start of Walk)
-                             | :
-                             | : <Walk>
-                             | :
-                        Time | O TransferStation (End of Walk, Start of Seg 2)
-                             | |
-                             | O FinalStation
-                     */}
                 </div>
             </div>
         );
     };
 
-    return (
-        <div
-            className="absolute bottom-0 left-0 w-full z-[1000] pointer-events-none flex flex-col justify-end"
-            style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', zIndex: 1000 }}
-        >
-            {/* Main Backdrop: Rounded Top, Glassmorphism */}
-            <div
-                className="pointer-events-auto w-full bg-white/90 backdrop-blur-2xl shadow-[0_-10px_40px_-5px_rgba(0,0,0,0.15)] pb-8 pt-6 px-4 transition-all duration-500"
-                style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    paddingBottom: isDrawerOpen ? '2rem' : '3rem',
-                    paddingTop: '2rem',
-                    borderTopLeftRadius: '2.5rem',
-                    borderTopRightRadius: '2.5rem',
-                    backdropFilter: 'blur(40px)',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.8)'
-                }}
+    const SearchForm = () => (
+        <div className="flex flex-col gap-4">
+            {inputs.map((input, index) => (
+                <div key={input.id} className="relative group">
+                    <div className={`absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${input.type === 'start' ? 'bg-green-500' :
+                        input.type === 'end' ? 'bg-red-500' : 'bg-gray-300'
+                        }`}></div>
+                    <input
+                        type="text"
+                        value={input.value}
+                        onChange={(e) => handleInputChange(input.id, e.target.value)}
+                        placeholder={input.placeholder}
+                        className="w-full h-12 pl-10 pr-4 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:border-black focus:ring-1 focus:ring-black outline-none transition-all font-bold text-lg"
+                    />
+                    {/* Delete / Add buttons could go here */}
+                </div>
+            ))}
+
+            {/* Desktop Search Button */}
+            <button
+                onClick={() => { }} // Auto-debouce handles search, this just forces UI update if needed
+                disabled={!pathResult}
+                className={`
+                    w-full h-14 rounded-xl font-bold text-lg flex items-center justify-center gap-2
+                    transition-all duration-300
+                    ${pathResult
+                        ? 'bg-black text-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'}
+                `}
             >
-                <div className="max-w-4xl mx-auto">
-                    {/* Input Row */}
-                    <div className="flex flex-row items-center justify-center flex-wrap gap-4 mb-2">
-                        {inputs.map((input, index) => (
-                            <div key={input.id} className="flex items-center relative gap-2">
-                                {/* Pill Input Container */}
-                                <div className="relative group">
-                                    {/* Label (Floating Top) */}
-                                    <div className={`absolute -top-5 left-4 text-[10px] font-extrabold tracking-widest uppercase ${input.type === 'start' ? 'text-green-600' : input.type === 'end' ? 'text-red-500' : 'text-gray-400'
-                                        } opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`}>
-                                        {input.type === 'start' ? 'START' : input.type === 'end' ? 'END' : 'VIA'}
-                                    </div>
+                {pathResult ? '경로 안내 시작' : '역 이름을 입력하세요'}
+            </button>
+        </div>
+    );
 
-                                    <input
-                                        type="text"
-                                        value={input.value}
-                                        onChange={(e) => handleInputChange(input.id, e.target.value)}
-                                        placeholder={input.placeholder}
-                                        className={`
-                                            w-40 sm:w-56 py-3 px-6 
-                                            bg-white shadow-sm
-                                            text-gray-900 font-black text-xl sm:text-2xl 
-                                            outline-none placeholder:text-gray-300
-                                            transition-all duration-300
-                                            rounded-full
-                                            border-[4px]
-                                            ${input.type === 'start'
-                                                ? 'border-green-500 focus:shadow-[0_0_0_4px_rgba(34,197,94,0.2)]'
-                                                : input.type === 'end'
-                                                    ? 'border-red-500 focus:shadow-[0_0_0_4px_rgba(239,68,68,0.2)]'
-                                                    : 'border-gray-300 focus:border-gray-500'
-                                            }
-                                        `}
-                                    />
-
-                                    {/* Waypoint Remove Button */}
-                                    {input.type === 'waypoint' && (
-                                        <button
-                                            onClick={() => removeWaypoint(input.id)}
-                                            className="absolute -top-2 -right-2 bg-white border border-gray-200 hover:bg-red-500 hover:border-red-500 text-gray-400 hover:text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-sm transition-all z-10"
-                                        >
-                                            ✕
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* Connector / Plus Button */}
-                                {index < inputs.length - 1 && (
-                                    <button
-                                        onClick={addWaypoint}
-                                        className="w-8 h-8 -ml-2 -mr-2 z-10 rounded-full bg-gray-50 hover:bg-gray-100 text-gray-400 border border-gray-200 hover:border-black hover:text-black flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-sm"
-                                        title="경유지 추가"
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                                        </svg>
-                                    </button>
-                                )}
+    return (
+        <>
+            {/* === MOBILE LAYOUT (Bottom Sheet) === */}
+            <div className="md:hidden fixed bottom-0 left-0 w-full z-[1000] pointer-events-none flex flex-col justify-end">
+                <div
+                    className="pointer-events-auto w-full bg-white/95 backdrop-blur-2xl shadow-[0_-10px_40px_-5px_rgba(0,0,0,0.15)] pb-safe-bottom pt-6 px-5 transition-all duration-500 rounded-t-[2.5rem] border-t border-white/50"
+                    style={{
+                        paddingBottom: isDrawerOpen ? '2rem' : '3rem',
+                    }}
+                >
+                    {/* Mobile Input Row (Compact) */}
+                    <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+                        {inputs.map((input) => (
+                            <div key={input.id} className="flex-shrink-0 relative">
+                                <input
+                                    className={`
+                                        w-32 h-10 px-4 rounded-full text-base font-bold border-2 outline-none
+                                        ${input.type === 'start' ? 'border-green-500/50 focus:border-green-500' :
+                                            input.type === 'end' ? 'border-red-500/50 focus:border-red-500' : 'border-gray-200'}
+                                    `}
+                                    value={input.value}
+                                    placeholder={input.placeholder}
+                                    onChange={(e) => handleInputChange(input.id, e.target.value)}
+                                />
                             </div>
                         ))}
-
-                        {/* Search / Toggle Button (Only show if we can search or have result) */}
-                        <button
-                            onClick={handleSearchClick}
-                            disabled={!pathResult}
-                            className={`
-                                ml-2 w-14 h-14 rounded-full flex items-center justify-center
-                                shadow-lg transition-all duration-300 hover:scale-105 active:scale-95
-                                ${pathResult
-                                    ? 'bg-black text-white cursor-pointer hover:shadow-xl'
-                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                }
-                            `}
-                        >
-                            {isDrawerOpen ? (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="18 15 12 9 6 15"></polyline>
-                                </svg>
-                            ) : (
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                </svg>
-                            )}
-                        </button>
                     </div>
 
-                    {/* Expandable Result Drawer */}
-                    <div
-                        className={`overflow-hidden transition-[max-height,opacity] duration-500 ease-in-out ${isDrawerOpen ? 'max-h-[600px] opacity-100 mt-6' : 'max-h-0 opacity-0'}`}
-                    >
-                        <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-xl overflow-y-auto max-h-[500px] scrollbar-hide">
-                            <TimelineView segments={timelineData} />
-                        </div>
+                    {/* Mobile Result Area */}
+                    <div className={`overflow-hidden transition-all duration-500 ${isDrawerOpen || pathResult ? 'max-h-[60vh] opacity-100' : 'max-h-0 opacity-0'}`}>
+                        {pathResult && (
+                            <div className="max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                                <TimelineView segments={timelineData} />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
-        </div>
+
+            {/* === DESKTOP LAYOUT (Left Sidebar) === */}
+            <div className="hidden md:flex flex-col fixed top-4 left-4 h-[calc(100vh-2rem)] w-[400px] z-[1000] bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
+                {/* Sidebar Header */}
+                <div className="p-6 pb-4 border-b border-gray-100/50 bg-white/50">
+                    <h1 className="text-2xl font-black italic tracking-tighter mb-6">
+                        Metro <span className="text-red-500">Live</span>
+                    </h1>
+                    <SearchForm />
+                </div>
+
+                {/* Sidebar Content (Scrollable) */}
+                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                    {pathResult ? (
+                        <TimelineView segments={timelineData} />
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
+                            <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            <p className="font-bold">출발역과 도착역을 입력해주세요</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </>
     );
 }
