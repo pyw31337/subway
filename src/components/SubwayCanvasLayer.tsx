@@ -275,6 +275,8 @@ export default function SubwayCanvasLayer({
             }
         }
 
+        // Draw Selected Stations (Overlays)
+        // ... (unchanged logic)
         // Draw Selected Stations & INFO LABELS
         const drawPathStationInfo = (name: string, index: number) => {
             const s = stations.find(st => st.name === name);

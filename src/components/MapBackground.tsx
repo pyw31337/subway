@@ -86,7 +86,7 @@ function MapBackground({ pathResult, startStation, endStation, onStationClick }:
                 {/* Internal component to track zoom */}
                 <ZoomHandler onZoomChange={setZoomLevel} />
 
-                {/* Base Map Tile Layer - Positron (Light/Gray) */}
+                {/* Base Map Tile Layer */}
                 <TileLayer
                     url={isDarkMode
                         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"

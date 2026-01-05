@@ -60,49 +60,10 @@ body {
     /* Smooth movement if we want CSS interpolation */
 }
 
-/* Train Marker Container - Smooth movement */
+/* Leaflet Marker Container for Trains */
 .train-marker-container {
     background: transparent !important;
     border: none !important;
     transition: transform 1s linear;
-}
-
-/* --- NEW VECTOR MAP STYLES --- */
-
-/* Vector Station Label */
-.station-label-vector {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
-    font-weight: 800 !important;
-    /* ExtraBold */
-    font-size: 13px !important;
-    color: #1f2937 !important;
-    /* Gray-800 */
-    white-space: nowrap;
-
-    /* The "Sticker" Effect */
-    -webkit-text-stroke: 4px white;
-    paint-order: stroke fill;
-
-    /* Additional Shadow for lift */
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
-}
-
-.station-label-vector::before {
-    display: none !important;
-}
-
-/* Active Station Node (Shadow) */
-.active-station-node {
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-}
-
-/* Route Active Marker (Highlight) */
-.route-active-marker {
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+    /* Smooth interpolation of Leaflet movement */
 }
