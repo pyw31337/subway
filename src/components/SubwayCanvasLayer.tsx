@@ -29,10 +29,10 @@ export default function SubwayCanvasLayer({
 }: SubwayCanvasLayerProps) {
     const map = useMap();
 
-    // Layer Refs
-    const staticLayerRef = useRef<L.LayerGroup | null>(null);
-    const dynamicLayerRef = useRef<L.LayerGroup | null>(null);
-    const highlightLayerRef = useRef<L.LayerGroup | null>(null);
+    // Separate LayerGroups for better performance
+    const staticLayerRef = useRef<L.LayerGroup | null>(null); // Lines & Stations
+    const dynamicLayerRef = useRef<L.LayerGroup | null>(null); // Trains
+    const highlightLayerRef = useRef<L.LayerGroup | null>(null); // Path Highlights
 
     // Initialize Layers
     useEffect(() => {
@@ -51,9 +51,17 @@ export default function SubwayCanvasLayer({
         };
     }, [map]);
 
-    // Active Line Logic
+    // 4. Helper: Determine active lines AND detailed segment info (Synchronous derivation)
+    // Returns: Map of LineID -> { direction: 1|-1, stationRange: [min, max], isBoardingLine: boolean }
+    interface LineSegment {
+        direction: 1 | -1;          // 1 (Ascending indices) or -1 (Descending)
+        startIdx: number;           // Index of start station on this line
+        endIdx: number;             // Index of end station on this line
+        boardingStations: number[]; // Indices of stations where we board/transfer onto this line
+    }
+
     const { activeLineDetails, activeLineIds, activeLineNames } = useMemo(() => {
-        const details = new Map<string, any>();
+        const details = new Map<string, LineSegment>();
         const ids = new Set<string>();
         const names = new Set<string>();
 
@@ -61,36 +69,63 @@ export default function SubwayCanvasLayer({
             return { activeLineDetails: details, activeLineIds: ids, activeLineNames: names };
         }
 
+        // Helper to find line config and indices
+        const getLineInfo = (stationName: string, lineName: string) => {
+            return SUBWAY_LINES.filter(l => l.name === lineName);
+        };
+
+        // Iterate segments
         for (let i = 0; i < pathResult.path.length - 1; i++) {
             const s1Name = pathResult.path[i];
             const s2Name = pathResult.path[i + 1];
-            if (s1Name === s2Name) continue;
+
+            if (s1Name === s2Name) continue; // Skip transfers (self-loops)
 
             const s1 = stations.find(s => s.name === s1Name);
             const s2 = stations.find(s => s.name === s2Name);
 
             if (s1 && s2) {
                 const commonLineNames = s1.lines.filter(l => s2.lines.includes(l));
+
                 commonLineNames.forEach(lName => {
+                    // Add Name to Set for broad context styling
                     names.add(lName);
+
+                    // Find the specific Line Object that contains both stations (to get indices)
                     const candidates = SUBWAY_LINES.filter(l => l.name === lName);
+
                     candidates.forEach(line => {
                         const idx1 = line.stations.findIndex(s => s.name === s1Name);
                         const idx2 = line.stations.findIndex(s => s.name === s2Name);
 
                         if (idx1 !== -1 && idx2 !== -1) {
+                            // Valid connection on this specific Line ID
                             ids.add(line.id);
+
+                            // Determine direction
                             const direction = idx2 > idx1 ? 1 : -1;
+
+                            // Update or Create Segment Info
                             const existing = details.get(line.id);
+
                             const min = Math.min(idx1, idx2);
                             const max = Math.max(idx1, idx2);
 
                             if (!existing) {
-                                details.set(line.id, { direction, startIdx: min, endIdx: max, boardingStations: [idx1] });
+                                details.set(line.id, {
+                                    direction,
+                                    startIdx: min,
+                                    endIdx: max,
+                                    boardingStations: [idx1] // We board at s1
+                                });
                             } else {
+                                // Extend range
                                 existing.startIdx = Math.min(existing.startIdx, min);
                                 existing.endIdx = Math.max(existing.endIdx, max);
-                                if (!existing.boardingStations.includes(idx1)) existing.boardingStations.push(idx1);
+
+                                if (!existing.boardingStations.includes(idx1)) {
+                                    existing.boardingStations.push(idx1);
+                                }
                             }
                         }
                     });
@@ -100,7 +135,7 @@ export default function SubwayCanvasLayer({
         return { activeLineDetails: details, activeLineIds: ids, activeLineNames: names };
     }, [pathResult, stations]);
 
-    // 1. Static Layer: Draw Lines & Stations (VECTOR MODE)
+    // 1. Static Layer: Draw Lines & Stations
     useEffect(() => {
         if (!staticLayerRef.current) return;
         const layerGroup = staticLayerRef.current;
@@ -108,92 +143,87 @@ export default function SubwayCanvasLayer({
 
         const isRouteActive = !!pathResult;
 
-        // Draw Lines (Double Stroke for Tube Style)
+        // Draw Lines
         SUBWAY_LINES.forEach((line) => {
             const latlngs = line.stations.map(s => [s.lat, s.lng] as [number, number]);
 
-            // Determine Style
-            let isActive = true;
-            if (isRouteActive && !activeLineNames.has(line.name)) {
-                isActive = false;
+            // Optimization: If route active, gray out unused lines
+            // UPDATED: Use Line NAME for styling context. 
+            // If "1호선" is active, ALL "1호선" segments (Soyosan, Incheon, etc.) will be Dark Gray.
+            const color = isRouteActive ? "#e5e7eb" : line.color;
+            const opacity = isRouteActive ? 0.3 : 0.85;
+            const weight = isRouteActive ? 2 : 4; // Thinner inactive lines
+
+            let drawColor = color;
+            let drawOpacity = opacity;
+            let drawWeight = weight;
+
+            if (isRouteActive) {
+                if (activeLineNames.has(line.name)) {
+                    // It's part of an active line (Broad Context) -> Dark Gray
+                    drawColor = "#374151"; // Dark Gray (gray-700)
+                    drawOpacity = 0.6;
+                    drawWeight = 1.5;
+                } else {
+                    // Completely irrelevant line -> Light Gray (Background)
+                    drawColor = "#e5e7eb"; // Gray-200
+                    drawOpacity = 0.2;
+                    drawWeight = 2;
+                }
             }
 
-            // Colors & Weights
-            const color = line.color;
-            const baseOpacity = isActive ? 1.0 : 0.2; // Fade out inactive
-            const baseWeight = isActive ? 5 : 4; // Thicken active lines
-
-            // 1. Outer White Stroke (The "Halo" or "Tube Border")
-            // Only strictly needed for active lines or high zoom, but we do it for all for quality.
-            L.polyline(latlngs, {
-                color: 'white',
-                weight: baseWeight + 3, // 3px wider than color
-                opacity: 0.9, // Almost solid white
+            const polyline = L.polyline(latlngs, {
+                color: drawColor,
+                weight: drawWeight,
+                opacity: drawOpacity,
                 lineCap: "round",
                 lineJoin: "round",
-                pane: 'overlayPane', // Ensure strictly ordered if we customized panes
-            }).addTo(layerGroup);
+            });
 
-            // 2. Inner Color Stroke
-            L.polyline(latlngs, {
-                color: color,
-                weight: baseWeight,
-                opacity: baseOpacity,
-                lineCap: "round",
-                lineJoin: "round",
-                pane: 'overlayPane',
-            }).addTo(layerGroup);
+            layerGroup.addLayer(polyline);
         });
 
-        // Draw Stations (Nodes)
-        const isZoomOut = zoomLevel < 13;
-        const zoomThreshold = 14;
+        // Draw Stations
+        const isZoomOut = zoomLevel < 12;
+        const zoomThreshold = 13;
 
         stations.forEach((station) => {
+            // Find if this station is on an active line
+            // ... (Logic kept simple: dim all non-path stations)
+
             const primaryLine = SUBWAY_LINES.find(l => l.name === station.lines[0]);
+
             let baseColor = primaryLine?.color || "#888";
-
-            // Dim inactive stations
             if (isRouteActive) {
-                const isOnActiveLine = station.lines.some(l => activeLineNames.has(l));
-                if (!isOnActiveLine) {
-                    baseColor = "#d1d5db"; // Gray 300
-                }
+                // Dim stations not on path
+                baseColor = "#d1d5db";
             }
 
-            // Node Sizing
-            const isTransfer = station.lines.length > 1;
-            let radius = isZoomOut ? (isTransfer ? 4 : 2.5) : (isTransfer ? 6 : 4.5);
-            let strokeWidth = isZoomOut ? 1 : 2;
-
+            // ... (Rest of station sizing logic)
+            let radius = isZoomOut ? (station.lines.length > 1 ? 4 : 2) : (station.lines.length > 1 ? 6 : 4);
+            let weight = isZoomOut ? (station.lines.length > 1 ? 2 : 1) : (station.lines.length > 1 ? 3 : 2);
             if (isRouteActive) {
-                // If not part of route, shrink
-                if (baseColor === "#d1d5db") {
-                    radius = 2;
-                    strokeWidth = 0;
-                }
+                radius = Math.max(2, radius - 1);
+                weight = 1;
             }
 
-            // Create Vector Marker (CircleMarker is SVG based)
             const marker = L.circleMarker([station.lat, station.lng], {
                 radius: radius,
-                color: baseColor,      // Border Color
-                weight: strokeWidth,   // Border Width
-                fillColor: "#fff",     // White Fill
-                fillOpacity: 1,
-                className: isRouteActive && baseColor !== "#d1d5db" ? 'active-station-node' : '', // Hook for shadow
+                color: baseColor,
+                fillColor: "#fff",
+                fillOpacity: isRouteActive ? 0.5 : 1,
+                weight: weight,
+                bubblingMouseEvents: false
             });
 
             marker.on('click', () => onStationClick(station.name));
 
-            // Tooltip (Label)
-            // Use SVG/HTML labels for clean typography
             if (zoomLevel >= zoomThreshold && !isRouteActive) {
                 marker.bindTooltip(station.name, {
                     permanent: true,
                     direction: "top",
-                    offset: [0, -radius - 2],
-                    className: "station-label-vector", // New CSS class
+                    offset: [0, -8],
+                    className: "station-label",
                 });
             }
 
@@ -202,162 +232,267 @@ export default function SubwayCanvasLayer({
 
     }, [zoomLevel, stations, pathResult, activeLineNames]);
 
-    // 2. Highlight Layer: Active Route Overlays
+    // 2. Highlight Layer: Selection & Path
     useEffect(() => {
         if (!highlightLayerRef.current) return;
         const layerGroup = highlightLayerRef.current;
         layerGroup.clearLayers();
 
-        if (!pathResult || !pathResult.path) return;
+        if (!startStation && !endStation && !pathResult) return;
 
-        // Draw Active Path (On top of everything)
-        if (pathResult.path.length > 1) {
+        // Draw Path Segments with Original Colors
+        if (pathResult && pathResult.path.length > 1) {
             for (let i = 0; i < pathResult.path.length - 1; i++) {
                 const s1Name = pathResult.path[i];
                 const s2Name = pathResult.path[i + 1];
+
                 const s1 = stations.find(s => s.name === s1Name);
                 const s2 = stations.find(s => s.name === s2Name);
 
                 if (s1 && s2) {
+                    // Identify the Line Color for this segment
                     const commonLineNames = s1.lines.filter(l => s2.lines.includes(l));
-                    let segmentColor = "#374151";
+                    let segmentColor = "#00E0C6"; // Fallback
 
                     if (commonLineNames.length > 0) {
+                        // Prefer the first common line
                         const lineConfig = SUBWAY_LINES.find(l => l.name === commonLineNames[0]);
                         if (lineConfig) segmentColor = lineConfig.color;
+                    } else {
+                        // Transfer Walk or Transfer Edge
+                        segmentColor = "#6b7280"; // Neutral gray for transfers
                     }
 
-                    // Draw Double Stroke Highlight
-                    // Thick White Glow
-                    L.polyline([[s1.lat, s1.lng], [s2.lat, s2.lng]], {
-                        color: 'white',
-                        weight: 12, // Very thick white background
-                        opacity: 1,
-                        lineCap: "round",
-                        lineJoin: "round"
-                    }).addTo(layerGroup);
-
-                    // Colored Path
-                    L.polyline([[s1.lat, s1.lng], [s2.lat, s2.lng]], {
+                    layerGroup.addLayer(L.polyline([[s1.lat, s1.lng], [s2.lat, s2.lng]], {
                         color: segmentColor,
-                        weight: 8, // Prominent path
+                        weight: 8,
                         opacity: 1,
+                        // renderer: myRenderer,
                         lineCap: "round",
                         lineJoin: "round"
-                    }).addTo(layerGroup);
+                    }));
                 }
             }
         }
 
-        // Selected Station Markers (Start/End/Intermediate)
-        pathResult.path.forEach((name, idx) => {
+        // Draw Selected Stations & INFO LABELS
+        const drawPathStationInfo = (name: string, index: number) => {
             const s = stations.find(st => st.name === name);
             if (!s) return;
 
-            const isStart = idx === 0;
-            const isEnd = idx === pathResult.path.length - 1;
+            const isStart = index === 0;
+            const isEnd = index === (pathResult?.path.length || 0) - 1;
+            const isTransfer = s.lines.length > 1;
 
-            // Visual Configuration
-            const primaryLine = SUBWAY_LINES.find(l => l.name === s.lines[0]);
-            const lineColor = primaryLine?.color || "#000";
-
+            // Determining Marker Style
+            let color = "#000"; // stroke
             let fillColor = "#fff";
-            let strokeColor = lineColor;
-            let radius = 6;
-            let weight = 3;
 
-            if (isStart || isEnd) {
-                fillColor = isStart ? "#22c55e" : "#ef4444";
-                strokeColor = "#fff"; // White border for solid fill
-                weight = 3;
-                radius = 8;
+            if (isStart) {
+                color = "#16a34a"; // Green-600
+                fillColor = "#22c55e"; // Green-500
+            } else if (isEnd) {
+                color = "#dc2626"; // Red-600
+                fillColor = "#ef4444"; // Red-500
+            } else {
+                // Intermediate: Use Line Color for stroke, White for fill (Existing style)
+                const primaryLine = SUBWAY_LINES.find(l => l.name === s.lines[0]);
+                color = primaryLine?.color || "#888";
+                fillColor = "#fff";
             }
 
-            // Marker
-            const marker = L.circleMarker([s.lat, s.lng], {
+            const radius = (isStart || isEnd) ? 7 : 5;
+            const weight = (isStart || isEnd) ? 2 : 3;
+
+            // 1. The Marker
+            layerGroup.addLayer(L.circleMarker([s.lat, s.lng], {
                 radius: radius,
-                color: strokeColor,
+                color: (isStart || isEnd) ? "#14532d" : color, // Dark stroke for start/end
                 fillColor: fillColor,
                 fillOpacity: 1,
                 weight: weight,
-                className: 'route-active-marker', // Add shadow via CSS
-            });
-            marker.addTo(layerGroup);
+                // renderer: myRenderer
+            }));
 
-            // Label (Always show for path stations)
-            // High Fidelity Label with Time
+            // 2. The Detailed Label
+            const now = new Date();
+            const arrivalTime = new Date(now.getTime() + index * 2 * 60000);
+            const timeStr = arrivalTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            // Info Content - White Rounded, No Shadow
+            const timeInfo = `<div class="bg-white rounded-xl px-2 py-0.5 mt-1 border border-gray-300 text-xs font-extrabold text-black whitespace-nowrap leading-none">${timeStr}</div>`;
+
+            const transferInfo = isTransfer && !isStart && !isEnd
+                ? `<div class="bg-white rounded-xl px-2 py-0.5 mt-0.5 border border-gray-300 text-xs font-extrabold text-black whitespace-nowrap leading-none">환승 5-1</div>`
+                : "";
+
+            // Name Style: Enhanced (User Request: +2pt, Bolder)
+            // text-sm (14px) -> text-lg (18px)
+            // font-boldEx -> font-extrabold (800)
+            const nameHtml = `<span class="text-black font-extrabold text-lg leading-none" style="-webkit-text-stroke: 1px white; paint-order: stroke fill;">${name}</span>`;
+
+            // HTML Content
             const labelHtml = `
-                <div class="flex flex-col items-center">
-                    <span class="text-[17px] font-black text-gray-900 leading-none tracking-tight" 
-                          style="-webkit-text-stroke: 4px white; paint-order: stroke fill; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-                          ${name}
-                    </span>
-                    ${(isStart || isEnd) ?
-                    `<div class="mt-1 px-2 py-0.5 bg-gray-900 text-white text-[12px] font-bold rounded-full shadow-md">
-                            ${isStart ? '출발' : '도착'}
-                        </div>` : ''
-                }
+                <div class="flex flex-col items-center leading-tight">
+                    ${nameHtml}
+                    ${timeInfo}
+                    ${transferInfo}
                 </div>
-             `;
+            `;
 
             const labelIcon = L.divIcon({
                 className: 'bg-transparent',
                 html: labelHtml,
-                iconSize: [100, 50],
-                iconAnchor: [50, -12]
+                iconSize: [100, 60],
+                iconAnchor: [50, -8] // Position nicely above
             });
 
-            L.marker([s.lat, s.lng], { icon: labelIcon, interactive: false }).addTo(layerGroup);
-        });
+            layerGroup.addLayer(L.marker([s.lat, s.lng], {
+                icon: labelIcon,
+                interactive: false,
+                zIndexOffset: 1000
+            }));
+        };
 
-    }, [pathResult, stations]);
+        if (pathResult) {
+            pathResult.path.forEach((name, idx) => drawPathStationInfo(name, idx));
+        }
+    }, [startStation, endStation, pathResult, stations]);
 
-    // 3. Dynamic Layer: Trains
-    // (Keep existing logic but improve markers)
+
+    // 3. Dynamic Layer: Trains (DOM Markers with Caching)
+    // We use a ref to cache markers: Map<trainId, L.Marker>
     const trainMarkersRef = useRef<Map<string, L.Marker>>(new Map());
+
     useEffect(() => {
         if (!dynamicLayerRef.current) return;
         const layerGroup = dynamicLayerRef.current;
-        const currentMarkers = trainMarkersRef.current;
-        // ... (Logic for filtering trains - kept brief for this phase, assuming reliability is key)
 
-        // Simple Update Loop
+        const currentMarkers = trainMarkersRef.current;
+        const isRouteActive = !!pathResult;
+
+        // 1. Update or Create Markers
         if (zoomLevel >= 11) {
             trains.forEach(train => {
-                // ... Visibility Check Logic (Omitted for brevity, reusing existing) ...
-                let marker = currentMarkers.get(train.id);
+                let isVisible = true;
 
-                // Create if new
+                if (isRouteActive) {
+                    // Strict Filtering Rule:
+                    // 1. Must be on activeLineIds
+                    // 2. Must match direction of travel
+                    // 3. Must be RELEVANT (On Path OR Arriving at Boarding Station)
+
+                    const segment = activeLineDetails.get(train.lineId);
+
+                    if (!segment) {
+                        isVisible = false;
+                    } else {
+                        // Direction Check
+                        if (train.direction !== segment.direction) {
+                            isVisible = false;
+                        } else {
+                            // Proximity/Range Check
+                            // 1. On Path: Index is between Start/End (inclusive)
+                            const min = Math.min(segment.startIdx, segment.endIdx);
+                            const max = Math.max(segment.startIdx, segment.endIdx);
+                            const onPath = train.stationIndex >= min && train.stationIndex <= max;
+
+                            // 2. Arriving at Boarding: Index is "before" a boarding station (approaching)
+                            // "Before" depends on direction.
+                            // If Dir=1 (Asc): Train < Boarding (e.g. at 5, boarding at 10. Dist=5)
+                            // If Dir=-1 (Desc): Train > Boarding (e.g. at 15, boarding at 10. Dist=5)
+                            let arriving = false;
+
+                            for (const boardIdx of segment.boardingStations) {
+                                const dist = (boardIdx - train.stationIndex) * segment.direction;
+                                // dist > 0 means approaching.
+                                // Let's show top 3... hard to sort inside a loop over single items.
+                                // Heuristic: Show if within 5 stations approaching?
+                                if (dist > 0 && dist <= 5) {
+                                    arriving = true;
+                                    break;
+                                }
+                            }
+
+                            if (!onPath && !arriving) {
+                                isVisible = false;
+                            }
+                        }
+                    }
+                }
+
+                if (!isVisible) {
+                    // If marker exists, we'll remove it in cleanup loop logic (or just skip update here)
+                    // We need to ensure we don't 'update' a train that should be hidden
+                    return;
+                }
+
+                let marker = currentMarkers.get(train.id);
+                // ... (Marker creation logic same as before)
                 if (!marker) {
                     const line = SUBWAY_LINES.find(l => l.id === train.lineId);
                     const color = line?.color || "#000";
-                    const svgHtml = `
-                        <div class="relative w-full h-full drop-shadow-md">
-                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="12" cy="12" r="11" fill="white" stroke="${color}" stroke-width="2"/>
-                                <path d="M7 10L10 13H14L17 10" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M12 17V13" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
-                                <circle cx="12" cy="12" r="2" fill="${color}"/>
-                            </svg>
-                        </div>
-                     `;
-
+                    const svgIcon = `
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 6V17H20V6C20 6 20 4 12 4C4 4 4 6 4 6ZM4 17V19H20V17M6 10H9V13H6V10ZM15 10H18V13H15V10ZM6 19L5 21H7L8 19H16L17 21H19L18 19" fill="${color}" stroke="white" stroke-width="1.5" stroke-linejoin="round"/>
+                        </svg>
+                    `;
                     const icon = L.divIcon({
-                        className: 'bg-transparent',
-                        html: svgHtml,
-                        iconSize: [28, 28],
-                        iconAnchor: [14, 14]
+                        className: 'train-marker-container',
+                        html: `<div class="train-marker">${svgIcon}</div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
                     });
-                    marker = L.marker([train.lat, train.lng], { icon, interactive: false, zIndexOffset: 500 });
+                    marker = L.marker([train.lat, train.lng], {
+                        icon: icon,
+                        interactive: false
+                    });
+                    marker.bindTooltip(`${train.lineName} (${train.headingTo})`, {
+                        direction: 'top', offset: [0, -10], className: 'train-label', permanent: false
+                    });
                     marker.addTo(layerGroup);
                     currentMarkers.set(train.id, marker);
                 } else {
                     marker.setLatLng([train.lat, train.lng]);
+                    if (!layerGroup.hasLayer(marker)) marker.addTo(layerGroup);
+                    marker.getTooltip()?.setContent(`${train.lineName} (${train.headingTo})`);
                 }
             });
         }
 
-    }, [trains, zoomLevel, pathResult]);
+        // 2. Remove Stale
+        currentMarkers.forEach((marker, id) => {
+            const train = trains.find(t => t.id === id);
+            let shouldRemove = false;
+            if (!train) shouldRemove = true;
+            else if (zoomLevel < 11) shouldRemove = true;
+            else if (isRouteActive && train) {
+                // Re-apply visibility check to remove existing ones that got filtered
+                const segment = activeLineDetails.get(train.lineId);
+                if (!segment) shouldRemove = true;
+                else {
+                    if (train.direction !== segment.direction) shouldRemove = true;
+                    else {
+                        const min = Math.min(segment.startIdx, segment.endIdx);
+                        const max = Math.max(segment.startIdx, segment.endIdx);
+                        const onPath = train.stationIndex >= min && train.stationIndex <= max;
+                        let arriving = false;
+                        for (const boardIdx of segment.boardingStations) {
+                            const dist = (boardIdx - train.stationIndex) * segment.direction;
+                            if (dist > 0 && dist <= 5) { arriving = true; break; }
+                        }
+                        if (!onPath && !arriving) shouldRemove = true;
+                    }
+                }
+            }
+
+            if (shouldRemove) {
+                marker.remove();
+                currentMarkers.delete(id);
+            }
+        });
+
+    }, [trains, zoomLevel, pathResult, activeLineDetails, activeLineIds]);
 
     return null;
 }
