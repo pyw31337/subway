@@ -3,7 +3,7 @@
 import { useEffect, useState, memo } from "react";
 import dynamic from "next/dynamic";
 import { getAllStations, Station } from "@/data/subway-lines";
-import { findShortestPath, PathResult } from "@/utils/pathfinding";
+import { PathResult } from "@/utils/pathfinding";
 import { useRealtimeTrains } from "@/hooks/useRealtimeTrains";
 
 // Dynamically import Leaflet components to avoid SSR issues
@@ -26,13 +26,14 @@ const SubwayCanvasLayer = dynamic(
     { ssr: false }
 );
 
-const RoutePlanner = dynamic(
-    () => import("./RoutePlanner"),
-    { ssr: false }
-);
+interface MapBackgroundProps {
+    pathResult: PathResult | null;
+    startStation: string | null;
+    endStation: string | null;
+    onStationClick?: (name: string) => void;
+}
 
-
-function MapBackground() {
+function MapBackground({ pathResult, startStation, endStation, onStationClick }: MapBackgroundProps) {
     const [isClient, setIsClient] = useState(false);
     const [stations, setStations] = useState<Station[]>([]);
     const [zoomLevel, setZoomLevel] = useState(12);
@@ -41,34 +42,14 @@ function MapBackground() {
     // Real-time trains
     const trains = useRealtimeTrains();
 
-    // Pathfinding state
-    const [startStation, setStartStation] = useState<string | null>(null);
-    const [endStation, setEndStation] = useState<string | null>(null);
-    const [pathResult, setPathResult] = useState<PathResult | null>(null);
-
     useEffect(() => {
         setIsClient(true);
         setStations(getAllStations());
     }, []);
 
-    // Sync path result and markers from RoutePlanner
-    const handlePathFound = (result: PathResult | null) => {
-        setPathResult(result);
-        if (result && result.path.length > 0) {
-            setStartStation(result.path[0]);
-            setEndStation(result.path[result.path.length - 1]);
-        } else {
-            setStartStation(null);
-            setEndStation(null);
-        }
-    };
-
-    // Note: handleStationClick is kept for compatibility but might need integration with RoutePlanner
-    // Currently RoutePlanner drives the path finding.
+    // Helper for station click if passed
     const handleStationClick = (name: string) => {
-        // Optional: We could implement "Click map to fill empty input" here if we lifted state.
-        // For now, map click just highlights locally, but won't trigger pathfinding until RoutePlanner is updated.
-        // To avoid confusion, let's just log it or do nothing for now, as RoutePlanner is the UI source of truth.
+        if (onStationClick) onStationClick(name);
         console.log("Clicked station:", name);
     };
 
@@ -125,10 +106,6 @@ function MapBackground() {
                     isDarkMode={isDarkMode}
                 />
             </MapContainer>
-
-            {/* Route Planner UI - Last element to ensure top stacking */}
-            <RoutePlanner onPathFound={handlePathFound} />
-
         </div >
     );
 }
