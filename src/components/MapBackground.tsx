@@ -77,20 +77,20 @@ function MapBackground({ pathResult, startStation, endStation, onStationClick }:
                 scrollWheelZoom={true}
                 zoomControl={false}
                 attributionControl={false}
-                preferCanvas={true}
+                preferCanvas={false}
                 minZoom={9}
                 maxBounds={[[36.5, 125.5], [38.5, 128.5]]} // Seoul/Gyeonggi area with buffer
                 maxBoundsViscosity={1.0} // Sticky bounds
-                style={{ height: "100%", width: "100%", background: "#f8f9fa" }}
+                style={{ height: "100%", width: "100%", background: "#ffffff" }}
             >
                 {/* Internal component to track zoom */}
                 <ZoomHandler onZoomChange={setZoomLevel} />
 
-                {/* Base Map Tile Layer */}
+                {/* Base Map Tile Layer - Voyager (Cleaner) */}
                 <TileLayer
                     url={isDarkMode
                         ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                        : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                     }
                 />
 
