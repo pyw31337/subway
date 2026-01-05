@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { findShortestPath, PathResult } from "@/utils/pathfinding";
 import { SUBWAY_LINES } from "@/data/subway-lines";
 
@@ -437,7 +437,7 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
     return (
         <>
             {/* === MOBILE LAYOUT (Bottom Sheet) === */}
-            <div className="md:hidden fixed bottom-0 left-0 w-full z-[1000] pointer-events-none flex flex-col justify-end">
+            <div className="md:hidden fixed bottom-0 left-0 w-full z-[5000] pointer-events-none flex flex-col justify-end">
                 <div
                     className="pointer-events-auto w-full bg-white/95 backdrop-blur-2xl shadow-[0_-10px_40px_-5px_rgba(0,0,0,0.15)] pb-safe-bottom pt-6 px-5 transition-all duration-500 rounded-t-[2.5rem] border-t border-white/50"
                     style={{
@@ -450,7 +450,7 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
                             <div key={input.id} className="flex-shrink-0 relative">
                                 <input
                                     className={`
-                                        w-32 h-10 px-4 rounded-full text-base font-bold border-2 outline-none
+                                        w-32 h-10 px-4 rounded-full text-base font-bold border-2 outline-none bg-white shadow-sm
                                         ${input.type === 'start' ? 'border-green-500/50 focus:border-green-500' :
                                             input.type === 'end' ? 'border-red-500/50 focus:border-red-500' : 'border-gray-200'}
                                     `}
@@ -474,7 +474,7 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
             </div>
 
             {/* === DESKTOP LAYOUT (Left Sidebar) === */}
-            <div className="hidden md:flex flex-col fixed top-4 left-4 h-[calc(100vh-2rem)] w-[400px] z-[1000] bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
+            <div className="hidden md:flex flex-col fixed top-4 left-4 h-[calc(100vh-2rem)] w-[400px] z-[5000] bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
                 {/* Sidebar Header */}
                 <div className="p-6 pb-4 border-b border-gray-100/50 bg-white/50">
                     <h1 className="text-2xl font-black italic tracking-tighter mb-6">
