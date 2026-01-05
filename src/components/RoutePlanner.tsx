@@ -218,70 +218,63 @@ const SearchForm = ({ inputs, handleInputChange, pathResult, onSwap }: {
     pathResult: any,
     onSwap: () => void
 }) => (
-    <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.08)] border border-gray-100/80 p-5 z-50 relative">
-        {/* Helper Tabs */}
-        <div className="flex items-center justify-between mb-5 border-b border-gray-100">
-            <div className="flex items-center gap-6">
-                <button className="text-[15px] font-black text-gray-900 border-b-[3px] border-gray-900 pb-2.5 -mb-[1px]">대중교통</button>
-                <button className="text-[15px] font-medium text-gray-400 hover:text-gray-600 pb-2.5 -mb-[1px] transition-colors">자동차</button>
-                <button className="text-[15px] font-medium text-gray-400 hover:text-gray-600 pb-2.5 -mb-[1px] transition-colors">도보</button>
-            </div>
-        </div>
-
+    <div className="flex flex-col w-full">
         {/* Input Fields Container */}
-        <div className="flex flex-col gap-2.5 relative">
+        <div className="flex flex-col gap-3 relative mb-4">
             {/* Start Input */}
             <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full box-content border-[3px] border-white ring-1 ring-gray-200 bg-green-500 shadow-sm z-20"></div>
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full box-content border-[3px] border-white ring-1 ring-gray-200 bg-green-500 z-20 shadow-sm"></div>
                 <input
                     type="text"
                     value={inputs.find(i => i.id === 'start')?.value}
                     onChange={(e) => handleInputChange('start', e.target.value)}
                     placeholder="출발지 입력"
-                    className="w-full h-[52px] pl-10 pr-12 bg-gray-50/50 rounded-lg border border-gray-200 focus:bg-white focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition-all text-[16px] font-bold text-gray-900 placeholder-gray-400"
+                    className="w-full h-[56px] pl-11 pr-12 bg-white rounded-xl border border-gray-200 focus:border-gray-900 focus:ring-0 outline-none transition-all text-[16px] font-bold text-gray-900 placeholder-gray-400 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:bg-gray-50 focus:bg-white"
                 />
             </div>
 
-            {/* Swap Button */}
-            <button
-                onClick={onSwap}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-white border border-gray-200 shadow-md hover:bg-gray-50 hover:shadow-lg hover:border-gray-300 z-30 transition-all active:scale-95"
-                aria-label="출발/도착 전환"
-                title="출발/도착 전환"
-            >
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
-            </button>
+            {/* Swap Button - Perfectly Centered Overlap */}
+            <div className="absolute left-[calc(100%-44px)] top-1/2 -translate-y-1/2 z-30">
+                <button
+                    onClick={onSwap}
+                    className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-gray-200 shadow-md hover:shadow-lg hover:bg-gray-50 transition-all active:scale-95 group"
+                    aria-label="출발/도착 전환"
+                    title="출발/도착 전환"
+                >
+                    <svg className="w-5 h-5 text-gray-400 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+                </button>
+            </div>
 
             {/* End Input */}
             <div className="relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full box-content border-[3px] border-white ring-1 ring-gray-200 bg-red-500 shadow-sm z-20"></div>
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full box-content border-[3px] border-white ring-1 ring-gray-200 bg-red-500 z-20 shadow-sm"></div>
                 <input
                     type="text"
                     value={inputs.find(i => i.id === 'end')?.value}
                     onChange={(e) => handleInputChange('end', e.target.value)}
                     placeholder="도착지 입력"
-                    className="w-full h-[52px] pl-10 pr-12 bg-gray-50/50 rounded-lg border border-gray-200 focus:bg-white focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none transition-all text-[16px] font-bold text-gray-900 placeholder-gray-400"
+                    className="w-full h-[56px] pl-11 pr-12 bg-white rounded-xl border border-gray-200 focus:border-gray-900 focus:ring-0 outline-none transition-all text-[16px] font-bold text-gray-900 placeholder-gray-400 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:bg-gray-50 focus:bg-white"
                 />
             </div>
         </div>
 
         {/* Action Buttons Row */}
-        <div className="flex gap-2.5 mt-4">
-            <button className="flex-1 h-10 rounded-lg border border-gray-200 bg-white text-gray-600 text-[13px] font-bold hover:bg-gray-50 hover:border-gray-300 flex items-center justify-center gap-1.5 transition-all">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        <div className="flex gap-3">
+            <button className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-gray-700 text-[14px] font-bold hover:bg-gray-50 hover:border-gray-300 flex items-center justify-center gap-1.5 transition-all shadow-sm">
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 다시입력
             </button>
-            <button className="flex-1 h-10 rounded-lg border border-gray-200 bg-white text-gray-600 text-[13px] font-bold hover:bg-gray-50 hover:border-gray-300 flex items-center justify-center gap-1.5 transition-all">
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+            <button className="flex-1 h-11 rounded-lg border border-gray-200 bg-white text-gray-700 text-[14px] font-bold hover:bg-gray-50 hover:border-gray-300 flex items-center justify-center gap-1.5 transition-all shadow-sm">
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                 경유지
             </button>
             <button
                 disabled={!pathResult}
                 className={`
-                    w-28 h-10 rounded-lg font-black text-[14px] flex items-center justify-center
+                    w-32 h-11 rounded-lg font-black text-[15px] flex items-center justify-center
                     transition-all duration-200 shadow-sm
                     ${pathResult
-                        ? 'bg-[#27C34B] text-white hover:bg-[#20A93F] hover:shadow-md active:scale-95' // Naver Green-ish
+                        ? 'bg-[#27C34B] text-white hover:bg-[#20A93F] hover:shadow-md active:scale-95' // Naver Green
                         : 'bg-gray-100 text-gray-300 cursor-not-allowed'}
                 `}
             >
@@ -524,12 +517,24 @@ export default function RoutePlanner({ onPathFound }: RoutePlannerProps) {
             </div>
 
             {/* === DESKTOP LAYOUT (Left Sidebar) === */}
-            <div className="hidden md:flex flex-col fixed top-0 left-0 h-screen w-[420px] z-[5000] bg-white shadow-[4px_0_24px_rgba(0,0,0,0.1)] border-r border-gray-100 font-sans">
-                {/* Sidebar Header */}
-                <div className="p-5 bg-white z-20 relative">
-                    <h1 className="text-[26px] font-black italic tracking-tighter mb-5 px-1 text-gray-900">
-                        Metro <span className="text-[#27C34B]">Live</span> {/* Naver Green */}
-                    </h1>
+            <div className="hidden md:flex flex-col fixed top-0 left-0 h-screen w-[420px] z-[5000] bg-white shadow-[4px_0_24px_rgba(0,0,0,0.06)] border-r border-gray-100 font-sans">
+                {/* Sidebar Header Container */}
+                <div className="p-6 bg-white z-20 relative flex flex-col">
+                    {/* YouTube Style Logo */}
+                    <div className="flex items-center gap-1 mb-1 select-none">
+                        <span className="text-[26px] font-black tracking-tighter text-gray-900 font-sans">
+                            Metro
+                        </span>
+                        <span className="bg-[#FF0000] text-white text-[20px] font-bold px-1.5 py-0.5 rounded-[4px] leading-none tracking-tighter flex items-center justify-center h-[28px] mt-0.5 pt-[2px]">
+                            Live
+                        </span>
+                    </div>
+
+                    {/* Subtitle */}
+                    <div className="text-[11px] text-gray-400 font-bold tracking-[0.2em] mb-7 pl-0.5 uppercase">
+                        Seoul Metro Real Time
+                    </div>
+
                     <SearchForm
                         inputs={inputs}
                         handleInputChange={handleInputChange}
